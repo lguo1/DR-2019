@@ -3,40 +3,42 @@ import numpy as np
 import objects
 
 def main():
-    B_p = []
+    B_r = [[],[]]
     B_s = []
-    models = (model(tf.Graph(), 'p0'), model(tf.Graph(), 'p1'))
+    M_r = (model(tf.Graph(), 'p0'), model(tf.Graph(), 'p1'))
     for t in range(iter):
         p = t%2
         p_not = (p+1)%2
         for n in range(trav):
-            collect_samples(node(), p, models, B_p, B_s)
-        train_network(B_p[p],0)
-        B_p[p_not] =
+            collect_samples(node(), p, p_not M_r, B_r, B_s, t)
+        train_network(B_r[p],0)
+        # update time in p_not
     train_network(B_s,1)
     return
 
-def collect_samples(h, p, models B_p, B_s):
+def collect_samples(h, p, p_not M_r B_r, B_s, t):
     if h.is_terminal():
         return h.util(p)
     elif h.P() == p:
-        sigma = calculate_strategy(h.I(p), models[p])
-        v = [0]
+        I = h.I(p)
+        sigma = calculate_strategy(I, M_r[p])
+        v_a = np.zeros(3)
         for a in h.A():
-            v(a) = collect_samples(h.place(a), p, models, B_p, B_s)
-            v += sigma[a]+v(a)
-        for a in h.A():
-            d[I][a] = v(a) - v
-        Add(B_p, (I, d[I], t))
+            v_a[a] = collect_samples(h.place(a), p, M_r, B_r, B_s)
+        v_s = np.dot(v_a, sigma)
+        d = v_a - v_s
+        B_r[p].append((I, d, t)) # change
     elif h.P() == p_not:
-        a = np.random.choice(h.A(), sigma)
-        return collect_samples(h.place(a), p, models, B_p, B_s)
+        sigma = calculate_strategy(I, M_r[p_not])
+        B_s.append((h.I(p_not), sigma, t))
+        a = np.random.choice(h.A(), p=sigma)
+        return collect_samples(h.place(a), p, M_r, B_r, B_s)
     else:
-        return collect_samples(h.deal(), p, models, B_p, B_s)
+        return collect_samples(h.deal(), p, M_r, B_r, B_s)
 
-def calculate_strategy(I, m_p):
+def calculate_strategy(I, model):
     sum = 0
-    D = f(I,m_p)
+    D = f(I,model)
     for a in A(I):
         sum += max(0, D(I, a))
     if sum > 0:

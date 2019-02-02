@@ -34,7 +34,7 @@ class node:
         self.cards = np.random.choice(3,2)
 
     def place(self, arr):
-        self.bets[self.turns]=arr
+        self.bets[self.turns] = arr
 
     def A(self):
         if self.turns == 0:
@@ -75,5 +75,6 @@ class node:
                 return (p == np.argmax(self.cards))*4
             else:
                 return (p == np.argmax(self.cards))*3
+
     def I(self, p):
-        self.c_info = self.cards[p]
+        return (self.cards[p], self.bets)
