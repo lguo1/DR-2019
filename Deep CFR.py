@@ -5,12 +5,12 @@ import objects
 def main():
     B_p = []
     B_s = []
-    models = (model(tf.Graph(), 'p1'), model(tf.Graph(), 'p2'))
+    models = (model(tf.Graph(), 'p0'), model(tf.Graph(), 'p1'))
     for t in range(iter):
         p = t%2
         p_not = (p+1)%2
         for n in range(trav):
-            collect_samples([], p, models, B_p, B_s)
+            collect_samples(node(), p, models, B_p, B_s)
         train_network(B_p[p],0)
         B_p[p_not] =
     train_network(B_s,1)
@@ -20,7 +20,7 @@ def collect_samples(h, p, models B_p, B_s):
     if h.is_terminal():
         return h.util(p)
     elif h.P() == p:
-        sigma = calculate_strategy(I(h), models[p])
+        sigma = calculate_strategy(h.I(p), models[p])
         v = [0]
         for a in h.A():
             v(a) = collect_samples(h.place(a), p, models, B_p, B_s)

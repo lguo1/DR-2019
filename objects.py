@@ -26,7 +26,7 @@ class model:
 
 class node:
     def __init__(self):
-        self.bets = np.zeros(3)
+        self.bets = np.full(3,np.inf)
         self.turns = -1
         self.is_terminal = False
 
@@ -38,14 +38,14 @@ class node:
 
     def A(self):
         if self.turns == 0:
-            return [2,3]
+            return [1,2]
         elif self.turns == 1:
-            if self.bets[0] == 2:
-                return [2,3]
+            if self.bets[0] == 1:
+                return [1,2]
             else:
-                return [1,3]
+                return [0,2]
         else:
-            return [1,3]
+            return [0,2]
 
     def P(self):
         if self.turns == -1:
@@ -54,24 +54,26 @@ class node:
             return (self.turns+1)%2
 
     def is_terminal(self):
-        if self.bets[2] != 0:
+        if self.bets[2] != np.inf:
             return True
-        elif self.bets[1] != 0:
+        elif self.bets[1] != np.inf:
             return True
         else:
             return False
 
     def util(self, p):
         thir = self.bets[2]
-        if third == 1:
+        if third == 0:
             return [3,0][p]
-        elif third == 3:
+        elif third == 2:
             return (p == np.argmax(self.cards))*4
         else:
             sec = self.bets[1]
-            if sec == 2:
+            if sec == 1:
                 return (p == np.argmax(self.cards))*2
-            elif sec == 3:
+            elif sec == 2:
                 return (p == np.argmax(self.cards))*4
             else:
                 return (p == np.argmax(self.cards))*3
+    def I(self, p):
+        self.c_info = self.cards[p]
