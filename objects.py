@@ -1,5 +1,5 @@
 class model:
-    def __init__(self, graph, name):
+    def __init__(self, graph, sess, name, softmax=True):
         with graph.as_default():
             with tf.variable_scope(name)):
                 self.input_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1])
@@ -22,7 +22,29 @@ class model:
                     layer = tf.matmul(layer, W) + b
                     if activation is not None:
                         layer = activation(layer)
-                self.output_pred = layer
+                if softmax:
+                    self.output_pred = tf.exp(layer)/tf.exp(layer).sum()
+                else:
+                    self.output_pred = layer
+                self.sess = sess
+
+    def predict(self, inputs):
+        return self.sess.run(self.output_pred, feed_dict={input_ph: inputs})
+
+    def train(self, B, S, N_train, N_batch):
+        mse = tf.reduce_mean(0.5 * tf.square(self.output_pred - self.output_ph))
+        opt = tf.train.AdamOptimizer().minimize(mse)
+        self.sess.run(tf.global_variables_initializer())
+        saver = tf.train.Saver()
+        for training_step in range(N_train):
+            indices = np.random.randint(low=0, high=len(B), size=N_batch)
+            input_batch = B[indices]
+            output_batch = outputs[indices] # change
+            _, mse_run = sess.run([opt, mse], feed_dict={self.input_ph: input_batch, self.output_ph: output_batch})
+            if training_step % 1000 == 0:
+                print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
+                saver.save(sess, '/saved/%s_%d.ckpt'%(self.name, training_step))
+
 
 class node:
     def __init__(self):

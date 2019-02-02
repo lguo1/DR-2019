@@ -5,7 +5,8 @@ import objects
 def main():
     B_r = [[],[]]
     B_s = []
-    M_r = (model(tf.Graph(), 'p0'), model(tf.Graph(), 'p1'))
+    sess = tf.Session()
+    M_r = (model(tf.Graph(), sess, 'p0'), model(tf.Graph(), sess, 'p1'))
     for t in range(iter):
         p = t%2
         p_not = (p+1)%2
@@ -14,6 +15,7 @@ def main():
         train_network(B_r[p],0)
         # update time in p_not
     train_network(B_s,1)
+    sess.close()
     return
 
 def collect_samples(h, p, p_not M_r B_r, B_s, t):
@@ -38,17 +40,15 @@ def collect_samples(h, p, p_not M_r B_r, B_s, t):
 
 def calculate_strategy(I, model):
     sum = 0
-    D = f(I,model)
-    for a in A(I):
-        sum += max(0, D(I, a))
+    d = model.predict(I)
+    d_plus = np.clip(d, 0)
+    sum = d_plus.sum()
     if sum > 0:
-        for a in A(I):
-            sigma = max(0, D(I, a))/sum
+        return d_plus/sum
     else:
-        for a in A(I):
-            sigma = [0]
-        sigma[argmax(D(I,a))] = 1
-    return sigma
+        sigma = np.zeros(3)
+        sigma[np.argmax(d)] = 1
+        return sigma
 
 def train_network(B, S):
     for b in range(train):
