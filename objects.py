@@ -82,9 +82,9 @@ class node:
             return (self.turns+1)%2
 
     def is_terminal(self):
-        if self.bets[2,1] != 0:
+        if self.bets[2] != [0,0]:
             return True
-        elif self.bets[1] == [0,1]:
+        elif self.bets[1] == [0,0]:
             return False
         elif self.bets[1] != [2,1]:
             return True
