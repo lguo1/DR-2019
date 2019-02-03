@@ -68,7 +68,7 @@ class node:
         if self.turns == 0:
             return [[1,1],[2,1]]
         elif self.turns == 1:
-            if self.bets[0] == 1:
+            if self.bets[0] == [1,1]:
                 return [[1,1],[2,1]]
             else:
                 return [[0,1],[2,1]]
