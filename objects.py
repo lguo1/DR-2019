@@ -1,36 +1,38 @@
 class model:
     def __init__(self, graph, sess, name, softmax=True):
+        self.sess = sess
         with graph.as_default():
             with tf.variable_scope(name)):
-                self.input_ph_0 = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-                self.input_ph_1 = tf.placeholder(dtype=tf.float32, shape=[None, 3, 2])
-                self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+                self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 3])
 
-                W0_0 = tf.get_variable(name='W0_0', shape=[1, 64], initializer=tf.contrib.layers.xavier_initializer())
-                W1_0 = tf.get_variable(name='W1_0', shape=[64, 64], initializer=tf.contrib.layers.xavier_initializer())
+                self.input_ph0 = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+                W0_0 = tf.get_variable(name='W0_0', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
+                W0_1 = tf.get_variable(name='W0_1', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
+                b0_0 = tf.get_variable(name='b0_0', shape=[32], initializer=tf.constant_initializer(0.))
+                b0_1 = tf.get_variable(name='b0/1', shape=[16], initializer=tf.constant_initializer(0.))
+                activations = [tf.nn.relu, None]
+                weights = [W0_0, W0_1]
+                biases = [b0_0, b0_1]
+                layer0 = self.input_ph0
+                layer0 = tf.nn.relu(tf.matmul(layer0, W0_0) + b0_0)
+                layer0 = tf.matmul(layer0, W0_1) + b0_1
 
-                W0_1 = tf.get_variable(name='W0_1', shape=[, 1], initializer=tf.contrib.layers.xavier_initializer())
-                W1_1 = tf.get_variable(name='W1_1', shape=[20, 1], initializer=tf.contrib.layers.xavier_initializer())
+                self.input_ph1 = tf.placeholder(dtype=tf.float32, shape=[None, 3, 2, 1])
+                W1_0 = tf.get_variable(name='W1_0', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
+                b1_0 = b0_1
+                layer1 = self.input_ph1
+                layer1 = tf.layers.conv2d(layer1, 32, (3,2), activation=tf.nn.relu)
+                layer1 = tf.layers.conv2d(layer1, 32, 1, activation=tf.nn.relu)
+                layer1 = tf.contrib.layers.flatten(layer1)
+                layer1 = tf.matmul(layer1, W1_0) + b1_0
 
-                b0 = tf.get_variable(name='b0', shape=[20], initializer=tf.constant_initializer(0.))
-                b1 = tf.get_variable(name='b1', shape=[20], initializer=tf.constant_initializer(0.))
-                b2 = tf.get_variable(name='b2', shape=[1], initializer=tf.constant_initializer(0.))
-
-                self.weights = [W0, W1, W2]
-                self.biases = [b0, b1, b2]
+                layer2 = tf.nn.relu(layer0 + layer1)
+                W2_0 = tf.get_variable(name='W2_0', shape=[16, 3], initializer=tf.contrib.layers.xavier_initializer())
+                b2_0 = tf.get_variable(name='b2', shape=[3], initializer=tf.constant_initializer(0.))
                 if softmax:
-                    self.activations = [tf.nn.relu, tf.nn.relu, tf.nn.softmax]
+                    self.output_pred = tf.nn.softmax(tf.matmul(layer2, W2_0) + b2_0)
                 else:
-                    self.activations = [tf.nn.relu, tf.nn.relu, None]
-
-                layer = self.input_ph
-                for W, b, activation in zip(self.weights, self.biases, self.activations):
-                    layer = tf.matmul(layer, W) + b
-                    if activation is not None:
-                        layer = activation(layer)
-
-                self.output_pred = layer
-                self.sess = sess
+                    self.output_pred = tf.matmul(layer2, W2_0) + b2_0
 
     def predict(self, inputs):
         return self.sess.run(self.output_pred, feed_dict={input_ph: inputs})
@@ -48,7 +50,6 @@ class model:
             if training_step % 1000 == 0:
                 print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
                 saver.save(sess, '/saved/%s_%d.ckpt'%(self.name, training_step))
-
 
 class node:
     def __init__(self):
@@ -108,5 +109,5 @@ class node:
             else:
                 return [3,0][p]
 
-def I(self, p):
-    return (self.cards[p], self.bets)
+    def I(self, p):
+        return (self.cards[p], self.bets)
