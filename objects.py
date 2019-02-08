@@ -37,16 +37,14 @@ class model:
     def predict(self, inputs):
         return self.sess.run(self.output_pred, feed_dict={input_ph: inputs})
 
-    def train(self, B, S, N_train, N_batch):
+    def train(self, B, weights, N_train, N_batch):
         mse = tf.reduce_mean(0.5 * tf.square(self.output_pred - self.output_ph))
         opt = tf.train.AdamOptimizer().minimize(mse)
         self.sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         for training_step in range(N_train):
-            indices = np.random.randint(low=0, high=len(B), size=N_batch)
-            input_batch = B[indices]
-            output_batch = outputs[indices] # change
-            _, mse_run = sess.run([opt, mse], feed_dict={self.input_ph: input_batch, self.output_ph: output_batch})
+            pairs = tf.contrib.training.weighted_resample(B, weights, 1/N_batch)
+            _, mse_run = self.sess.run([opt, mse], feed_dict={self.input_ph0: pairs[:,0], self.input_ph1: pairs[:,1], self.output_ph: pairs[:,2]})
             if training_step % 1000 == 0:
                 print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
                 saver.save(sess, '/saved/%s_%d.ckpt'%(self.name, training_step))
@@ -110,4 +108,4 @@ class node:
                 return [3,0][p]
 
     def I(self, p):
-        return (self.cards[p], self.bets)
+        return [self.cards[p], self.bets]
