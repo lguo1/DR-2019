@@ -39,7 +39,6 @@ def collect_samples(h, p, p_not, M_r, B_v, B_s):
         I = h.I(p_not)
         sigma = calculate_strategy(I, M_r[p_not])
         B_s.add(I, sigma)
-        print(sigma)
         a = h.A()[np.random.choice(2, p=sigma)]
         return collect_samples(h.place(a), p, p_not, M_r, B_v, B_s)
     else:
