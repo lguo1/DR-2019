@@ -99,7 +99,7 @@ class model:
 # fold 0; check 1; bet 2.
 class node:
     def __init__(self):
-        self.actions = np.zeros(3)
+        self.hist = np.zeros(3)
         self.prog = np.zeros(3)
         self.turns = -1
 
@@ -109,16 +109,21 @@ class node:
         return self
 
     def place(self, action):
-        self.actions[self.turns] = action
-        self.prog[self.turns] = 1
-        self.turns += 1
+        try:
+            self.hist[self.turns] = action
+            self.prog[self.turns] = 1
+            self.turns += 1
+        except IndexError:
+            print(self.prog)
+            print(self.hist)
+            raise
         return self
 
     def A(self):
         if self.turns == 0:
             return [1,2]
         elif self.turns == 1:
-            if self.actions[0] == 1:
+            if self.hist[0] == 1:
                 return [1,2]
             else:
                 return [0,2]
@@ -136,21 +141,21 @@ class node:
             return True
         elif not self.prog[1]:
             return False
-        elif self.actions[1] != 2:
+        elif self.hist[1] != 2:
             return True
-        elif self.actions[0] == 2:
+        elif self.hist[0] == 2:
             return True
         else:
             return False
 
     def util(self, p):
-        thd = self.actions[2]
+        thd = self.hist[2]
         if thd == 0:
             return [0,3][p]
         elif thd == 2:
             return (p == np.argmax(self.cards))*4
         else:
-            sec = self.actions[1]
+            sec = self.hist[1]
             if sec == 1:
                 return (p == np.argmax(self.cards))*2
             elif sec == 2:
@@ -159,4 +164,4 @@ class node:
                 return [3,0][p]
 
     def I(self, p):
-        return [self.cards[p], self.actions, self.prog]
+        return [self.cards[p], self.hist, self.prog]
