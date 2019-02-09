@@ -1,26 +1,35 @@
 import tensorflow as tf
 import numpy as np
+from operator import itemgetter
 
 class buffer:
     def __init__(self):
         self.list = [[],[],[],[]]
         self.size = 0
+        self.count = 0
+
     def add(self, input, output):
         self.list[0].append(input[0])
         self.list[1].append(input[1])
         self.list[2].append(input[2])
         self.list[3].append(output)
         self.size += 1
+        self.count += 1
         return self.list
 
+    def set(self):
+        self.count = 0
+
     def sample(self, indices):
-        return (self.list[0,indices], self.list[1,indices], self.list[2,indices], self.list[3,indices])
+        return (itemgetter(*indices)(self.list[0]), itemgetter(*indices)(self.list[1]), itemgetter(*indices)(self.list[2]), itemgetter(*indices)(self.list[3]))
 
 def connect(input, weights, biases, activations):
     layer = input
     for W, b, activation in zip(weights, biases, activations):
         layer = tf.matmul(layer, W) + b
-
+        if activation is not None:
+            layer = activation(layer)
+    return layer
 
 class model:
     def __init__(self, name, softmax=True):
@@ -29,69 +38,63 @@ class model:
             with tf.variable_scope(name):
                 self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 3])
 
-                b1_D = tf.get_variable(name='D/b1'%name, shape=[16], initializer=tf.constant_initializer(0.))
+                b1d = tf.get_variable(name='b1d', shape=[16], initializer=tf.constant_initializer(0.))
+                b2d = tf.get_variable(name='b2d', shape=[16], initializer=tf.constant_initializer(0.))
+                b3d = tf.get_variable(name='b3d', shape=[3], initializer=tf.constant_initializer(0.))
+                W2d = tf.get_variable(name='W2d', shape=[16, 16], initializer=tf.contrib.layers.xavier_initializer())
+                W3d = tf.get_variable(name='W3d', shape=[16, 3], initializer=tf.contrib.layers.xavier_initializer())
 
-                self.input_ph_A = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-                W0_A = tf.get_variable(name='A/W0'%name, shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
-                W1_A = tf.get_variable(name='A/W1'%name, shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
-                b0_A = tf.get_variable(name='A/b0'%name, shape=[32], initializer=tf.constant_initializer(0.))
-
-                self.input_ph_B = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-                W0_B = tf.get_variable(name='B/W0', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
-                W1_B = tf.get_variable(name='B/W1', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
-                b0_B = tf.get_variable(name='B/b0', shape=[32], initializer=tf.constant_initializer(0.))
-
-                self.input_ph_C = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-                W0_C = tf.get_variable(name='C/W0', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
-                W1_C = tf.get_variable(name='C/W1', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
-                b0_C = tf.get_variable(name='C/b0', shape=[32], initializer=tf.constant_initializer(0.))
-
+                self.input_pha = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+                W0a = tf.get_variable(name='W0a', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
+                W1a = tf.get_variable(name='W1a', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
+                b0a = tf.get_variable(name='b0a', shape=[32], initializer=tf.constant_initializer(0.))
                 activations = [tf.nn.relu, None]
-                weights = [W0_0, W0_1]
-                biases = [b0_0, b0_1]
-                layer0 = self.input_ph0
-                layer0 = tf.nn.relu(tf.matmul(layer0, W0_0) + b0_0)
-                layer0 = tf.matmul(layer0, W0_1) + b0_1
+                weights = [W0a, W1a]
+                biases = [b0a, b1d]
+                outputa = connect(self.input_pha, weights, biases, activations)
 
-                self.input_ph1 = tf.placeholder(dtype=tf.float32, shape=[None, 3])
-                W1_0 = tf.get_variable(name='W1_0', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
-                W0_0 = tf.get_variable(name='W0_0', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
-                W0_1 = tf.get_variable(name='W0_1', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
-                b0_0 = tf.get_variable(name='b0_0', shape=[32], initializer=tf.constant_initializer(0.))
-                b0_1 = tf.get_variable(name='b2_0', shape=[16], initializer=tf.constant_initializer(0.))
-                b1_0 = b0_1
-                layer1 = self.input_ph1
-                layer1 = tf.layers.conv2d(layer1, 32, (3,2), activation=tf.nn.relu)
-                layer1 = tf.layers.conv2d(layer1, 32, 1, activation=tf.nn.relu)
-                layer1 = tf.contrib.layers.flatten(layer1)
-                layer1 = tf.matmul(layer1, W1_0) + b1_0
+                self.input_phb = tf.placeholder(dtype=tf.float32, shape=[None, 3])
+                W0b = tf.get_variable(name='W0b', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
+                W1b = tf.get_variable(name='W1b', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
+                b0b = tf.get_variable(name='b0b', shape=[32], initializer=tf.constant_initializer(0.))
+                weights = [W0b, W1b]
+                biases = [b0b, b1d]
+                outputb = connect(self.input_phb, weights, biases, activations)
 
-                layer2 = tf.nn.relu(layer0 + layer1)
-                W2_0 = tf.get_variable(name='W2_1', shape=[16, 3], initializer=tf.contrib.layers.xavier_initializer())
-                b2_0 = tf.get_variable(name='b2_1', shape=[3], initializer=tf.constant_initializer(0.))
+                self.input_phc = tf.placeholder(dtype=tf.float32, shape=[None, 3])
+                W0c = tf.get_variable(name='W0c', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
+                W1c = tf.get_variable(name='W1c', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
+                b0c = tf.get_variable(name='b0c', shape=[32], initializer=tf.constant_initializer(0.))
+                weights = [W0c, W1c]
+                biases = [b0c, b1d]
+                outputc = connect(self.input_phc, weights, biases, activations)
+
+                inputd = outputa + outputb + outputc
                 if softmax:
-                    self.output_pred = tf.nn.softmax(tf.matmul(layer2, W2_0) + b2_0)
+                    activations = [tf.nn.relu, tf.nn.softmax]
                 else:
-                    self.output_pred = tf.matmul(layer2, W2_0) + b2_0
-                init_graph = tf.global_variables_initializer()
-        self.sess = tf.Session(graph=self.graph)
-        self.sess.run(init_graph)
+                    activations = [tf.nn.relu, None]
+                weights = [W2d, W3d]
+                biases = [b2d, b3d]
+                self.output_pred = connect(inputd, weights, biases, activations)
+
+                self.mse = tf.reduce_mean(0.5 * tf.square(self.output_pred - self.output_ph))
+                self.opt = tf.train.AdamOptimizer().minimize(self.mse)
+
+                self.sess = tf.Session()
+                self.sess.run(tf.global_variables_initializer())
+                self.saver = tf.train.Saver()
 
     def predict(self, inputs):
-        return self.sess.run(self.output_pred, feed_dict={self.input_ph0: [inputs[0]], self.input_ph1: [inputs[1]]})
+        return self.sess.run(self.output_pred, feed_dict={self.input_pha: [inputs[0]], self.input_phb: [inputs[1]], self.input_phc: [inputs[2]]})
 
     def train(self, B, weights, N_train, N_batch):
-        mse = tf.reduce_mean(0.5 * tf.square(self.output_pred - self.output_ph))
-        opt = tf.train.AdamOptimizer().minimize(mse)
-        saver = tf.train.Saver()
         for training_step in range(N_train):
-            sample = B.sample(tf.contrib.training.weighted_resample(range(B.size), weights, N_batch/B.size))
-            _, mse_run = self.sess.run([opt, mse], feed_dict={self.input_ph0: sample[0], self.input_ph1: sample[1], self.output_ph: sample[2]})
+            weights = np.array(weights)
+            sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
+            _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
             if training_step % 1000 == 0:
                 print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
-                saver.save(sess, '/saved/%s_%d.ckpt'%(self.name, training_step))
-
-
 
 # fold 0; check 1; bet 2.
 class node:
@@ -99,7 +102,6 @@ class node:
         self.actions = np.zeros(3)
         self.prog = np.zeros(3)
         self.turns = -1
-        self.is_terminal = False
 
     def deal(self):
         self.cards = np.random.choice(3,(2,1))
