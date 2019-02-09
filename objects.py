@@ -4,12 +4,12 @@ class model:
             with tf.variable_scope(name)):
                 self.input_ph_0 = tf.placeholder(dtype=tf.float32, shape=[None, 1])
                 self.input_ph_1 = tf.placeholder(dtype=tf.float32, shape=[None, 3, 2])
-                self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+                self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 3])
 
                 W0_0 = tf.get_variable(name='W0_0', shape=[1, 64], initializer=tf.contrib.layers.xavier_initializer())
                 W1_0 = tf.get_variable(name='W1_0', shape=[64, 64], initializer=tf.contrib.layers.xavier_initializer())
 
-                W0_1 = tf.get_variable(name='W0_1', shape=[, 1], initializer=tf.contrib.layers.xavier_initializer())
+                W0_1 = tf.get_variable(name='W0_1', shape=[3,2,], initializer=tf.contrib.layers.xavier_initializer())
                 W1_1 = tf.get_variable(name='W1_1', shape=[20, 1], initializer=tf.contrib.layers.xavier_initializer())
 
                 b0 = tf.get_variable(name='b0', shape=[20], initializer=tf.constant_initializer(0.))
