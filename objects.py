@@ -36,7 +36,7 @@ class model:
         self.graph = tf.Graph()
         with self.graph.as_default():
             with tf.variable_scope(name):
-                self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 3])
+                self.output_ph = tf.takeholder(dtype=tf.float32, shape=[None, 3])
 
                 b1d = tf.get_variable(name='b1d', shape=[16], initializer=tf.constant_initializer(0.))
                 b2d = tf.get_variable(name='b2d', shape=[16], initializer=tf.constant_initializer(0.))
@@ -44,7 +44,7 @@ class model:
                 W2d = tf.get_variable(name='W2d', shape=[16, 16], initializer=tf.contrib.layers.xavier_initializer())
                 W3d = tf.get_variable(name='W3d', shape=[16, 3], initializer=tf.contrib.layers.xavier_initializer())
 
-                self.input_pha = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+                self.input_pha = tf.takeholder(dtype=tf.float32, shape=[None, 1])
                 W0a = tf.get_variable(name='W0a', shape=[1, 32], initializer=tf.contrib.layers.xavier_initializer())
                 W1a = tf.get_variable(name='W1a', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
                 b0a = tf.get_variable(name='b0a', shape=[32], initializer=tf.constant_initializer(0.))
@@ -53,7 +53,7 @@ class model:
                 biases = [b0a, b1d]
                 outputa = connect(self.input_pha, weights, biases, activations)
 
-                self.input_phb = tf.placeholder(dtype=tf.float32, shape=[None, 3])
+                self.input_phb = tf.takeholder(dtype=tf.float32, shape=[None, 3])
                 W0b = tf.get_variable(name='W0b', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
                 W1b = tf.get_variable(name='W1b', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
                 b0b = tf.get_variable(name='b0b', shape=[32], initializer=tf.constant_initializer(0.))
@@ -61,7 +61,7 @@ class model:
                 biases = [b0b, b1d]
                 outputb = connect(self.input_phb, weights, biases, activations)
 
-                self.input_phc = tf.placeholder(dtype=tf.float32, shape=[None, 3])
+                self.input_phc = tf.takeholder(dtype=tf.float32, shape=[None, 3])
                 W0c = tf.get_variable(name='W0c', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
                 W1c = tf.get_variable(name='W1c', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
                 b0c = tf.get_variable(name='b0c', shape=[32], initializer=tf.constant_initializer(0.))
@@ -97,71 +97,68 @@ class model:
                 print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
 
 # fold 0; check 1; bet 2.
-class node:
+class game
     def __init__(self):
-        self.hist = np.zeros(3)
-        self.prog = np.zeros(3)
-        self.turns = -1
+        self.tree = {"A": "B",
+                    "B": ["", "C", "D"],
+                    "C": ["", "E", "F"],
+                    "D": ["G", "", "H"],
+                    "F": ["J", "", "K"]}
+        self.current = "A"
+        self.info = {"B": [[0,0,0],[0,0,0]],
+                    "C": [[1,0,0],[1,0,0]],
+                    "D": [[2,0,0],[1,0,0]],
+                    "E": [[1,1,0],[1,1,0]],
+                    "F": [[1,2,0],[1,1,0]],
+                    "G": [[2,0,0],[1,1,0]],
+                    "H": [[2,2,0],[1,1,0]],
+                    "J": [[1,2,1],[1,1,1]],
+                    "K": [[1,2,2],[1,1,1]]
+                    }
+        self.available = {"B": [1,2],
+                        "C": [1,2],
+                        "D": [0,2],
+                        "F": [0,2]}
 
     def deal(self):
         self.cards = np.random.choice(3,(2,1))
-        self.turns += 1
+        self.current = self.tree[self.current]
         return self
 
-    def place(self, action):
-        try:
-            self.hist[self.turns] = action
-            self.prog[self.turns] = 1
-            self.turns += 1
-        except IndexError:
-            print(self.prog)
-            print(self.hist)
-            raise
+    def take(self, action):
+        self.current = self.tree[self.current][action]
         return self
 
     def A(self):
-        if self.turns == 0:
-            return [1,2]
-        elif self.turns == 1:
-            if self.hist[0] == 1:
-                return [1,2]
-            else:
-                return [0,2]
-        else:
-            return [0,2]
+        return self.available[self.current]
 
     def P(self):
-        if self.turns == -1:
-            return -1
+        if self.current in ["C", "D"]:
+            return 1
+        elif self.current in ["B", "F"]:
+            return 0
         else:
-            return (self.turns+1)%2
+            return None
 
     def is_terminal(self):
-        if self.prog[2]:
-            return True
-        elif not self.prog[1]:
-            return False
-        elif self.hist[1] != 2:
-            return True
-        elif self.hist[0] == 2:
+        if self.current in ["E", "J", "K", "G", "H"]:
             return True
         else:
             return False
 
     def util(self, p):
-        thd = self.hist[2]
-        if thd == 0:
+        if self.current == "E":
+            return (p == np.argmax(self.cards))*2
+        elif self.current == "J":
             return [0,3][p]
-        elif thd == 2:
+        elif self.current == "K":
+            return (p == np.argmax(self.cards))*4
+        elif self.current == "G":
+            return [3,0][p]
+        elif self.current == "H":
             return (p == np.argmax(self.cards))*4
         else:
-            sec = self.hist[1]
-            if sec == 1:
-                return (p == np.argmax(self.cards))*2
-            elif sec == 2:
-                return (p == np.argmax(self.cards))*4
-            else:
-                return [3,0][p]
+            return None
 
     def I(self, p):
-        return [self.cards[p], self.hist, self.prog]
+        return (self.cards[p]], *self.info[self.current])

@@ -25,8 +25,6 @@ def main(iter, trav, N_train=2000, N_batch=1000):
         W_v[p].extend([(1+t)/2]*B_vp.count)
         M_r[p].train(B_vp, W_v[p], N_train, N_batch)
     M_s.train(B_s)
-    sess.close()
-    return
 
 def collect_samples(h, p, p_not, M_r, B_vp, B_s):
     if h.is_terminal():
@@ -37,7 +35,7 @@ def collect_samples(h, p, p_not, M_r, B_vp, B_s):
         sigma = calculate_strategy(I, A, M_r[p])
         v_a = np.zeros(3)
         for a in A:
-            v_a[a] = collect_samples(h.place(a), p, p_not, M_r, B_vp, B_s)
+            v_a[a] = collect_samples(h.take(a), p, p_not, M_r, B_vp, B_s)
         v_s = np.dot(v_a, sigma)
         d = v_a - v_s
         B_vp.add(I,d)
@@ -50,7 +48,7 @@ def collect_samples(h, p, p_not, M_r, B_vp, B_s):
             a = np.random.choice(3, p=sigma)
         except ValueError:
             a = np.random.choice(3, p=sigma/sigma.sum())
-        return collect_samples(h.place(a), p, p_not, M_r, B_vp, B_s)
+        return collect_samples(h.take(a), p, p_not, M_r, B_vp, B_s)
     else:
         return collect_samples(h.deal(), p, p_not, M_r, B_vp, B_s)
 
