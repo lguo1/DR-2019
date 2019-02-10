@@ -33,6 +33,7 @@ def connect(input, weights, biases, activations):
 
 class model:
     def __init__(self, name, softmax=True):
+        self.name = name
         self.graph = tf.Graph()
         with self.graph.as_default():
             with tf.variable_scope(name):
@@ -94,7 +95,7 @@ class model:
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
             if training_step % 1000 == 0:
-                print('{0:04d} mse: {1:.3f}'.format(training_step, mse_run))
+                print('%s: %04d mse: %0.3f'%(self.name, training_step, mse_run))
 
 # fold 0; check 1; bet 2.
 class game:

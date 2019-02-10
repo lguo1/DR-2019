@@ -22,7 +22,6 @@ def main(iter, trav, N_train=2000, N_batch=1000):
         B_vp.set()
         for n in range(trav):
             collect_samples(G, "A", p, p_not, M_r, B_vp, B_s)
-        print(B_vp.list[1][0:10])
         W_v[p].extend([(1+t)/2]*B_vp.count)
         M_r[p].train(B_vp, W_v[p], N_train, N_batch)
     M_s.train(B_s)
