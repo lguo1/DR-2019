@@ -9,7 +9,7 @@ args = parser.parse_args()
 def main(iter, trav, N_train=2000, N_batch=1000):
     tf.set_random_seed(1)
     np.random.seed(1)
-
+    G = game()
     B_v = (buffer(), buffer())
     B_s = buffer()
     W_v = [[],[]]
@@ -21,36 +21,37 @@ def main(iter, trav, N_train=2000, N_batch=1000):
         B_vp = B_v[p]
         B_vp.set()
         for n in range(trav):
-            collect_samples(node(), p, p_not, M_r, B_vp, B_s)
+            collect_samples(G, "A", p, p_not, M_r, B_vp, B_s)
+        print(B_vp.list[1][0:10])
         W_v[p].extend([(1+t)/2]*B_vp.count)
         M_r[p].train(B_vp, W_v[p], N_train, N_batch)
     M_s.train(B_s)
 
-def collect_samples(h, p, p_not, M_r, B_vp, B_s):
-    if h.is_terminal():
-        return h.util(p)
-    elif h.P() == p:
-        I = h.I(p)
-        A = h.A()
+def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
+    if game.is_terminal(node):
+        return game.util(node, p)
+    elif game.P(node) == p:
+        I = game.I(node, p)
+        A = game.A(node)
         sigma = calculate_strategy(I, A, M_r[p])
         v_a = np.zeros(3)
         for a in A:
-            v_a[a] = collect_samples(h.take(a), p, p_not, M_r, B_vp, B_s)
+            v_a[a] = collect_samples(game, game.take(node, a), p, p_not, M_r, B_vp, B_s)
         v_s = np.dot(v_a, sigma)
         d = v_a - v_s
-        B_vp.add(I,d)
-    elif h.P() == p_not:
-        I = h.I(p_not)
-        A = h.A()
+        B_vp.add(I, d)
+    elif game.P(node) == p_not:
+        I = game.I(node, p_not)
+        A = game.A(node)
         sigma = calculate_strategy(I, A, M_r[p_not])
         B_s.add(I, sigma)
         try:
             a = np.random.choice(3, p=sigma)
         except ValueError:
             a = np.random.choice(3, p=sigma/sigma.sum())
-        return collect_samples(h.take(a), p, p_not, M_r, B_vp, B_s)
+        return collect_samples(game, game.take(node, a), p, p_not, M_r, B_vp, B_s)
     else:
-        return collect_samples(h.deal(), p, p_not, M_r, B_vp, B_s)
+        return collect_samples(game.deal(), "B", p, p_not, M_r, B_vp, B_s)
 
 def calculate_strategy(I, A, model):
     sigma = np.zeros(3)
