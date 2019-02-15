@@ -1,30 +1,27 @@
 from objects import *
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("iter", help="number of iterations", type=int, default=10000)
-parser.add_argument("trav", help="number of iterations", type=int, default=100)
-args = parser.parse_args()
-
-def main(iter, trav, N_train=2000, N_batch=1000):
+def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
     tf.set_random_seed(1)
     np.random.seed(1)
     G = game()
     B_v = (buffer(), buffer())
     B_s = buffer()
-    W_v = [[],[]]
+    W_v = [[],[],[]]
     M_r = (model('p0', True), model('p1', True))
     M_s = model('state')
     for t in range(iter):
         p = t%2
         p_not = (p+1)%2
         B_vp = B_v[p]
+        B_s.set()
         B_vp.set()
         for n in range(trav):
             collect_samples(G, "A", p, p_not, M_r, B_vp, B_s)
         W_v[p].extend([(1+t)/2]*B_vp.count)
-        M_r[p].train(B_vp, W_v[p], N_train, N_batch)
-    M_s.train(B_s)
+        W_v[2].extend([(1+t)/2]*B_s.count)
+        M_r[p].train(B_vp, W_v[p], train_v, batch_v)
+    M_s.train(B_s, W_v[2], train_s, batch_s, True)
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
     if game.is_terminal(node):
@@ -39,6 +36,7 @@ def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
         v_s = np.dot(v_a, sigma)
         d = v_a - v_s
         B_vp.add(I, d)
+        return v_s
     elif game.P(node) == p_not:
         I = game.I(node, p_not)
         A = game.A(node)
@@ -62,5 +60,9 @@ def calculate_strategy(I, A, model):
     else:
         sigma[A[np.argmax(d)]] = 1
         return sigma
-
-main(int(args.iter), int(args.trav))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("iter", help="number of iterations", type=int, default=10000)
+    parser.add_argument("trav", help="number of iterations", type=int, default=100)
+    args = parser.parse_args()
+    main(int(args.iter), int(args.trav))
