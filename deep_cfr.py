@@ -60,6 +60,7 @@ def calculate_strategy(I, A, model):
     else:
         sigma[A[np.argmax(d)]] = 1
         return sigma
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("iter", help="number of iterations", type=int, default=10000)
