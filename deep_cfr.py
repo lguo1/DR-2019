@@ -7,7 +7,7 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
     G = game()
     B_v = (buffer(), buffer())
     B_s = buffer()
-    W_v = [[],[],[]]
+    W = [[],[],[]]
     M_r = (model('p0', True), model('p1', True))
     M_s = model('state')
     for t in range(iter):
@@ -18,10 +18,10 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
         B_vp.set()
         for n in range(trav):
             collect_samples(G, "A", p, p_not, M_r, B_vp, B_s)
-        W_v[p].extend([(1+t)/2]*B_vp.count)
-        W_v[2].extend([(1+t)/2]*B_s.count)
-        M_r[p].train(B_vp, W_v[p], train_v, batch_v)
-    M_s.train(B_s, W_v[2], train_s, batch_s, True)
+        W[p].extend([(1+t)/2]*B_vp.count)
+        W[2].extend([(1+t)/2]*B_s.count)
+        M_r[p].train(B_vp, W[p], train_v, batch_v)
+    M_s.train(B_s, W[2], train_s, batch_s, True)
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
     if game.is_terminal(node):
@@ -60,8 +60,8 @@ def calculate_strategy(I, A, model):
     else:
         sigma[A[np.argmax(d)]] = 1
         return sigma
-        
-if __name__ == "__main__":
+
+if __name__ == __main__:
     parser = argparse.ArgumentParser()
     parser.add_argument("iter", help="number of iterations", type=int, default=10000)
     parser.add_argument("trav", help="number of iterations", type=int, default=100)

@@ -98,8 +98,9 @@ class model:
                 print('%s: %04d mse: %0.3f'%(self.name, training_step, mse_run))
             if save is not None:
                 self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
-    def restore(self, name):
-        self.saver.restore(self.sess, './saves/%s_model.ckpt'%(name))
+
+    def restore(self):
+        self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0; check 1; bet 2.
 class game:
