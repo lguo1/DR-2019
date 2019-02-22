@@ -76,7 +76,7 @@ def measure_performance(M):
     for c in range(3):
         for n in range(4):
             node = "BFCD"[n]
-            sigmas[c,n] = calculate_strategy((card, node), T.A(node), M)
+            sigmas[c,n] = calculate_strategy(([c], *T.info[node]), T.A(node), M)
     c = 0
     alphas[0] = .5*(sigmas[c, 0, 2] - sigmas[c, 0, 1] + 1)
     err0 += np.sum(np.square(sigmas[c, 1] - np.array([1, 0, 0])))

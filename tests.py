@@ -12,7 +12,7 @@ def mse_p0():
     print(op_strat)
     return np.sum(np.square(strat - op_strat))
 
-def strategy_check(T, M):
+def check_strategy(T, M):
     p0 = []
     p1 = []
     T.cards = np.array([[1],[0]])
@@ -24,7 +24,7 @@ def strategy_check(T, M):
     print("p0 strats: \nB:", p0[0], "\nF:", p0[1])
     print("p1 strats: \nC:", p1[0], "\nD:", p1[1])
 
-def collect_samples_check(T, M):
+def check_collect_samples(T, M):
     T.cards = np.array([[1],[0]])
     print("cards:", T.cards[0,0], T.cards[1,0])
     B_v = (buffer(), buffer())
@@ -54,5 +54,6 @@ def collect_samples_check(T, M):
     # print(B_v[1].list)
     # print(B_s.list)
 
-strategy_check(T, M)
+check_strategy(T, M)
+check_collect_samples(T, M)
 #print(mse_p0())
