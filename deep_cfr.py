@@ -4,6 +4,8 @@ import argparse
 def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
     tf.set_random_seed(1)
     np.random.seed(1)
+    errs0 = []
+    errs1 = []
     G = game()
     B_v = (buffer(), buffer())
     B_s = buffer()
@@ -21,7 +23,11 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
         W[p].extend([(1+t)/2]*B_vp.count)
         W[2].extend([(1+t)/2]*B_s.count)
         M_r[p].train(B_vp, W[p], train_v, batch_v)
-    M_s.train(B_s, W[2], train_s, batch_s, True)
+        if t % 100 == 0:
+            M_s.train(B_s, W[2], train_s, batch_s, True)
+            err0, err1 = measure_performance(M_s)
+            errs0.append(err0)
+            errs1.append(err1)
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
     if game.is_terminal(node):
@@ -60,6 +66,38 @@ def calculate_strategy(I, A, model):
     else:
         sigma[A[np.argmax(d)]] = 1
         return sigma
+
+def measure_performance(M):
+    T = game()
+    err0 = 0
+    err1 = 0
+    sigmas = np.empty([3, 4, 3])
+    alphas = np.empty(3)
+    for c in range(3):
+        for n in range(4):
+            node = "BFCD"[n]
+            sigmas[c,n] = calculate_strategy((card, node), T.A(node), M)
+    c = 0
+    alphas[0] = (.5*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1))
+    err0 += np.sum(np.square(sigmas[c, 1] - np.array([1, 0, 0])))
+    err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 2/3, 1/3])))
+    err1 += np.sum(np.square(sigmas[c, 3] - np.array([1, 0, 0])))
+
+    c = 1
+    err0 += np.sum(np.square(sigmas[c, 0] - np.array([1, 0, 0])))
+    alphas[1] = (.5*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1/3))
+    err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 1, 0])))
+    err1 += np.sum(np.square(sigmas[c, 3] - np.array([2/3, 1/3, 0])))
+
+    c = 2
+    alphas[2] = (1/6*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1))
+    err0 += np.sum(np.square(sigmas[c, 1] - np.array([0, 0, 1])))
+    err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 0, 1])))
+    err1 += np.sum(np.square(sigmas[c, 3] - np.array([0, 0, 1])))
+
+    err0 += np.var(alphas)
+    return err0, err1
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
