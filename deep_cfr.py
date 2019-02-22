@@ -78,26 +78,25 @@ def measure_performance(M):
             node = "BFCD"[n]
             sigmas[c,n] = calculate_strategy((card, node), T.A(node), M)
     c = 0
-    alphas[0] = (.5*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1))
+    alphas[0] = .5*(sigmas[c, 0, 2] - sigmas[c, 0, 1] + 1)
     err0 += np.sum(np.square(sigmas[c, 1] - np.array([1, 0, 0])))
     err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 2/3, 1/3])))
     err1 += np.sum(np.square(sigmas[c, 3] - np.array([1, 0, 0])))
 
     c = 1
-    err0 += np.sum(np.square(sigmas[c, 0] - np.array([1, 0, 0])))
-    alphas[1] = (.5*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1/3))
+    err0 += np.sum(np.square(sigmas[c, 0] - np.array([0, 1, 0])))
+    alphas[1] = .5*(sigmas[c, 0, 2] - sigmas[c, 0, 1] + 1/3)
     err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 1, 0])))
-    err1 += np.sum(np.square(sigmas[c, 3] - np.array([2/3, 1/3, 0])))
+    err1 += np.sum(np.square(sigmas[c, 3] - np.array([2/3, 0, 1/3])))
 
     c = 2
-    alphas[2] = (1/6*(sigmas[c, 0, 2] - sigma[c, 0, 1] + 1))
+    alphas[2] = 1/6*(sigmas[c, 0, 2] - sigmas[c, 0, 1] + 1)
     err0 += np.sum(np.square(sigmas[c, 1] - np.array([0, 0, 1])))
     err1 += np.sum(np.square(sigmas[c, 2] - np.array([0, 0, 1])))
     err1 += np.sum(np.square(sigmas[c, 3] - np.array([0, 0, 1])))
 
     err0 += np.var(alphas)
     return err0, err1
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
