@@ -61,9 +61,9 @@ def calculate_strategy(I, A, model):
         sigma[A[np.argmax(d)]] = 1
         return sigma
 
-if __name__ == __main__:
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("iter", help="number of iterations", type=int, default=10000)
-    parser.add_argument("trav", help="number of iterations", type=int, default=100)
+    parser.add_argument("trav", help="number of travesals", type=int, default=100)
     args = parser.parse_args()
     main(int(args.iter), int(args.trav))

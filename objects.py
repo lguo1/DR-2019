@@ -109,7 +109,7 @@ class game:
                     "B": ["", "C", "D"],
                     "C": ["", "E", "F"],
                     "D": ["G", "", "H"],
-                    "F": ["J", "", "K"]}
+                    "F": ["I", "", "J"]}
         self.info = {
                     "B": [[0,0,0],[0,0,0]],
                     "C": [[1,0,0],[1,0,0]],
@@ -118,8 +118,8 @@ class game:
                     "F": [[1,2,0],[1,1,0]],
                     "G": [[2,0,0],[1,1,0]],
                     "H": [[2,2,0],[1,1,0]],
-                    "J": [[1,2,1],[1,1,1]],
-                    "K": [[1,2,2],[1,1,1]]}
+                    "I": [[1,2,1],[1,1,1]],
+                    "J": [[1,2,2],[1,1,1]]}
         self.available = {
                         "B": [1,2],
                         "C": [1,2],
@@ -127,20 +127,20 @@ class game:
                         "F": [0,2]}
 
     def deal(self):
-        self.cards = np.random.choice(3,(2,1))
+        self.cards = np.random.choice(3,(2,1),replace=False)
         return self
 
     def util(self, node, p):
         if node == "E":
-            return (p == np.argmax(self.cards))*2
+            return (p == np.argmax(self.cards))*2-1
+        elif node == "I":
+            return [-1,1][p]
         elif node == "J":
-            return [0,3][p]
-        elif node == "K":
-            return (p == np.argmax(self.cards))*4
+            return (p == np.argmax(self.cards))*4-2
         elif node == "G":
-            return [3,0][p]
+            return [1,-1][p]
         elif node == "H":
-            return (p == np.argmax(self.cards))*4
+            return (p == np.argmax(self.cards))*4-2
         else:
             return None
 
@@ -159,7 +159,7 @@ class game:
             return None
 
     def is_terminal(self, node):
-        if node in ["E", "J", "K", "G", "H"]:
+        if node in ["E", "I", "J", "G", "H"]:
             return True
         else:
             return False
