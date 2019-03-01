@@ -1,4 +1,5 @@
 from objects import *
+from itertools import permutations
 import argparse
 
 def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
@@ -22,12 +23,47 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
             collect_samples(G, "A", p, p_not, M_r, B_vp, B_s)
         W[p].extend([(1+t)/2]*B_vp.count)
         W[2].extend([(1+t)/2]*B_s.count)
+        print("iteration %04d"%t)
         M_r[p].train(B_vp, W[p], train_v, batch_v)
         if t % 100 == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
             err0, err1 = measure_performance(M_s)
             errs0.append(err0)
             errs1.append(err1)
+
+def value_state(game, node, p, M_r):
+    if game.is_terminal(node):
+        return game.util(node, p)
+    else:
+        sigma = calculate_strategy(I, A, M_r[game.P(node)])
+        v_a = np.zeros(3)
+        for a in game.A(node):
+            v_a[a] = value_state(game, game.take(node, a), p, M_r)
+        return np.dot(v_a, sigma)
+
+def best_response(game, node, p, p_not, M_r):
+    sigma = np.zeros(3)
+    v_a = np.zeros(3)
+    A = game.A(node)
+    for a in A:
+        v_a[a] = value_state(game, game.take(node, a), p, M_r)
+    sigma[A[np.argmax(d)]] = 1
+    return sigma
+
+def exploit(game, p, p_not, M_r):
+    for level in [3,2,1,0]:
+        for node in game.layers[level]:
+
+def all_util(game, node):
+    all_util = np.zeros(6,2)
+    all_hands = permutations(range(3),2)
+    all_values = {}
+    for i in range(6):
+        game.cards = all_hands[i]
+        all_util[i,0] = value_state(game, node, 0, M_r)
+        all_util[i,1] = value_state(game, node, 1, M_r)
+        all_values[]
+
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
     if game.is_terminal(node):

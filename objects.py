@@ -95,7 +95,7 @@ class model:
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
             if training_step % 1000 == 0:
-                print('%s: %04d mse: %0.3f'%(self.name, training_step, mse_run))
+                print('%s: mse: %0.3f'%(self.name, mse_run))
             if save:
                 self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
 
@@ -124,7 +124,8 @@ class game:
                         "B": [1,2],
                         "C": [1,2],
                         "D": [0,2],
-                        "F": [0,2]}
+                        "F": [0,2]}                
+        self.layers = ["B","CD","EFGH","IJ"]
 
     def deal(self):
         self.cards = np.random.choice(3,(2,1),replace=False)
