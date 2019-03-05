@@ -104,14 +104,48 @@ class model:
 
 # fold 0; check 1; bet 2.
 class node:
-    def __init__(self, name, bet=None, match=None, check=None):
+    def __init__(self, name):
         self.name = name
-        self.bet = bet
-        self.raise = match
-        self.check = check
+
+    def fold_to(self, node):
+        self.fold = node
+        node.before = self
+
+    def check_to(self, node):
+        self.check = node
+        node.before = self
+
+    def bet_to(self, node):
+        self.bet = node
+        node.before = self
+
+    def take(action_index):
+        if action_index = 0:
+            return
+
 class game:
     def __init__(self):
-        self.head = node("B", bet=)
+        self.A = node("A")
+        self.B = node("B")
+        self.C = node("C")
+        self.D = node("D")
+        self.E = node("E")
+        self.F = node("F")
+        self.G = node("G")
+        self.H = node("H")
+        self.I = node("I")
+        self.J = node("J")
+        B.check_to(C)
+        B.bet_to(D)
+        D.fold_to(G)
+        D.bet_to(H)
+        C.check_to(E)
+        C.bet_to(F)
+        F.fold_to(I)
+        F.bet_to(J)
+
+
+
 class game:
     def __init__(self):
         self.all_cards = permutations(range(3),2)
