@@ -103,8 +103,18 @@ class model:
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0; check 1; bet 2.
+class node:
+    def __init__(self, name, bet=None, match=None, check=None):
+        self.name = name
+        self.bet = bet
+        self.raise = match
+        self.check = check
 class game:
     def __init__(self):
+        self.head = node("B", bet=)
+class game:
+    def __init__(self):
+        self.all_cards = permutations(range(3),2)
         self.tree = {
                     "B": ["", "C", "D"],
                     "C": ["", "E", "F"],
@@ -124,7 +134,7 @@ class game:
                         "B": [1,2],
                         "C": [1,2],
                         "D": [0,2],
-                        "F": [0,2]}                
+                        "F": [0,2]}
         self.layers = ["B","CD","EFGH","IJ"]
 
     def deal(self):

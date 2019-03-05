@@ -50,20 +50,43 @@ def best_response(game, node, p, p_not, M_r):
     sigma[A[np.argmax(d)]] = 1
     return sigma
 
-def exploit(game, p, p_not, M_r):
+def exploit(game, node, p, p_not, M_r, cards_i, strat, exp_tree):
+    if node == "B":
+
+    elif game.P(node) == p:
+        for a in game.A(node):
+            next = game.take(node, a)
+            exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]*exp_tree[node][p, cards_i]
+            exploit(game, next, cards_i, strat, exp_tree)
+    elif game.P(node) == p_not:
+        for a in game.A(node):
+            next = game.take(node, a)
+            exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]
+            exploit(game, next, cards_i, strat, exp_tree)
+
     for level in [3,2,1,0]:
         for node in game.layers[level]:
 
-def all_util(game, node):
+def term_util(game, node):
     all_util = np.zeros(6,2)
-    all_hands = permutations(range(3),2)
+
     all_values = {}
     for i in range(6):
-        game.cards = all_hands[i]
+        game.cards = game.all_cards[i]
         all_util[i,0] = value_state(game, node, 0, M_r)
         all_util[i,1] = value_state(game, node, 1, M_r)
         all_values[]
 
+def all_strat(game, M_r):
+    strat = {}
+    strat_per_node = np.zeros(3,3)
+    for node in "BCDF":
+        for hand in range(3):
+            p = game.P(node)
+            game.cards[p] = hand
+            strat_per_node[hand] = calculate_strategy(game.I(node, p), game.A(node), M_r[p])
+        strat[node] = strat_per_node
+    return strat
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
     if game.is_terminal(node):
