@@ -103,73 +103,44 @@ class model:
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0; check 1; bet 2.
-class node:
-    def __init__(self, name):
-        self.name = name
-
-    def fold_to(self, node):
-        self.fold = node
-        node.before = self
-
-    def check_to(self, node):
-        self.check = node
-        node.before = self
-
-    def bet_to(self, node):
-        self.bet = node
-        node.before = self
-
-    def take(action_index):
-        if action_index = 0:
-            return
-
 class game:
     def __init__(self):
-        self.A = node("A")
-        self.B = node("B")
-        self.C = node("C")
-        self.D = node("D")
-        self.E = node("E")
-        self.F = node("F")
-        self.G = node("G")
-        self.H = node("H")
-        self.I = node("I")
-        self.J = node("J")
-        B.check_to(C)
-        B.bet_to(D)
-        D.fold_to(G)
-        D.bet_to(H)
-        C.check_to(E)
-        C.bet_to(F)
-        F.fold_to(I)
-        F.bet_to(J)
-
-
-
-class game:
-    def __init__(self):
-        self.all_cards = permutations(range(3),2)
+        self.all_perms = permutations(range(3),2)
         self.tree = {
-                    "B": ["", "C", "D"],
-                    "C": ["", "E", "F"],
-                    "D": ["G", "", "H"],
-                    "F": ["I", "", "J"]}
+        "B": ["", "C", "D"],
+        "C": ["", "E", "F"],
+        "D": ["G", "", "H"],
+        "F": ["I", "", "J"]
+        }
+        self.before = {
+        "I": "F",
+        "J": "F",
+        "E": "C",
+        "F": "C",
+        "G": "D",
+        "H": "D",
+        "C": "B",
+        "D": "B"
+        }
         self.info = {
-                    "B": [[0,0,0],[0,0,0]],
-                    "C": [[1,0,0],[1,0,0]],
-                    "D": [[2,0,0],[1,0,0]],
-                    "E": [[1,1,0],[1,1,0]],
-                    "F": [[1,2,0],[1,1,0]],
-                    "G": [[2,0,0],[1,1,0]],
-                    "H": [[2,2,0],[1,1,0]],
-                    "I": [[1,2,1],[1,1,1]],
-                    "J": [[1,2,2],[1,1,1]]}
+        "B": [[0,0,0],[0,0,0]],
+        "C": [[1,0,0],[1,0,0]],
+        "D": [[2,0,0],[1,0,0]],
+        "E": [[1,1,0],[1,1,0]],
+        "F": [[1,2,0],[1,1,0]],
+        "G": [[2,0,0],[1,1,0]],
+        "H": [[2,2,0],[1,1,0]],
+        "I": [[1,2,1],[1,1,1]],
+        "J": [[1,2,2],[1,1,1]]
+        }
         self.available = {
-                        "B": [1,2],
-                        "C": [1,2],
-                        "D": [0,2],
-                        "F": [0,2]}
+        "B": [1,2],
+        "C": [1,2],
+        "D": [0,2],
+        "F": [0,2]
+                        }
         self.layers = ["B","CD","EFGH","IJ"]
+        self.terminal = "EIJGH"
 
     def deal(self):
         self.cards = np.random.choice(3,(2,1),replace=False)
@@ -202,12 +173,6 @@ class game:
             return 0
         else:
             return None
-
-    def is_terminal(self, node):
-        if node in ["E", "I", "J", "G", "H"]:
-            return True
-        else:
-            return False
 
     def I(self, node, p):
         return (self.cards[p], *self.info[node])

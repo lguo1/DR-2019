@@ -32,7 +32,7 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
             errs1.append(err1)
 
 def value_state(game, node, p, M_r):
-    if game.is_terminal(node):
+    if node in game.terminal:
         return game.util(node, p)
     else:
         sigma = calculate_strategy(I, A, M_r[game.P(node)])
@@ -50,8 +50,17 @@ def best_response(game, node, p, p_not, M_r):
     sigma[A[np.argmax(d)]] = 1
     return sigma
 
-def exploit(game, node, p, p_not, M_r, cards_i, strat, exp_tree):
-    if node == "B":
+def exp_tree(game, node, p, p_not, M_r, cards_i, strat, exp_tree):
+    util_tree = {}
+    F_util = np.zeros((6, 2))
+    sigma = np.zeros((6, 2))
+    for i in range(6):
+        perm = game.all_perms[i]
+        game.cards = np.array([perm])
+        util = (game.util("I", 0), game.util("J", 0))
+        sigma[i, np.argmax(util)] = strat["C"][perm[1], 2]/
+        per_p = per_p_not
+
 
     elif game.P(node) == p:
         for a in game.A(node):
@@ -64,8 +73,17 @@ def exploit(game, node, p, p_not, M_r, cards_i, strat, exp_tree):
             exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]
             exploit(game, next, cards_i, strat, exp_tree)
 
-    for level in [3,2,1,0]:
-        for node in game.layers[level]:
+def strat_tree(game, M_r):
+    strat_tree = {}
+    strat_per_node = np.zeros(3,3)
+    for node in "BCDF":
+        for hand in range(3):
+            p = game.P(node)
+            game.cards[p] = hand
+            strat_per_node[hand] = calculate_strategy(game.I(node, p), game.A(node), M_r[p])
+        strat[node] = strat_per_node
+    return strat
+
 
 def term_util(game, node):
     all_util = np.zeros(6,2)
@@ -77,19 +95,9 @@ def term_util(game, node):
         all_util[i,1] = value_state(game, node, 1, M_r)
         all_values[]
 
-def all_strat(game, M_r):
-    strat = {}
-    strat_per_node = np.zeros(3,3)
-    for node in "BCDF":
-        for hand in range(3):
-            p = game.P(node)
-            game.cards[p] = hand
-            strat_per_node[hand] = calculate_strategy(game.I(node, p), game.A(node), M_r[p])
-        strat[node] = strat_per_node
-    return strat
 
 def collect_samples(game, node, p, p_not, M_r, B_vp, B_s):
-    if game.is_terminal(node):
+    if node in game.terminal:
         return game.util(node, p)
     elif game.P(node) == p:
         I = game.I(node, p)
