@@ -1,4 +1,4 @@
-import tensorflow as tf
+Aimport tensorflow as tf
 import numpy as np
 from operator import itemgetter
 
@@ -110,29 +110,8 @@ def create_subtree(tree, key):
     tree["D" + key] = ["G" + key, "", "H" + key]
     tree["F" + key] = ["I" + key, "", "J" + key]
 
-class node:
-    def __init__(self, info=None, actions=None):
-        self.info = info
-        self.fold = None
-        self.check = None
-        self.bet = None
-        self.next = [self.fold, self.check, self.bet]
-        self.actions = actions
-class root:
-    def __init__(self):
-        self.next = [self.ab, self.ac, self.ba, self.bc, self.ca, self.cb]
-
-def create_subtree(root, child_ind):
-    B = node([[0,0,0],[0,0,0]], [1,2])
-    root.next[child_ind] = B
-
 class game:
     def __init__(self):
-        A = node()
-
-
-        B = node([[0,0,0],[0,0,0]], [1,2])
-
         self.perms= ["01", "02", "10", "12", "20", "21"]
         self.tree = {}
         perm_lst = []
@@ -155,6 +134,9 @@ class game:
         "J": [[1,2,2],[1,1,1]]
         }
 
+        self.p0_set = [["01", "02"], ["10", "12"], ["20", "21"]]
+        self.p1_set = [["10", "20"], ["01", "21"], ["02", "12"]]
+
         self.available = {
         "B": [1,2],
         "C": [1,2],
@@ -163,7 +145,7 @@ class game:
         }
 
     def deal(self):
-         return self.tree["N"][np.random.choice(6, 1)]
+         return self.tree["A"][np.random.choice(6, 1)]
 
     def util(self, node, p):
         if node[0] == "E":
@@ -228,9 +210,9 @@ class game:
 
     def build_strat(self, M_r):
         queue = Queue()
-        strat_p0 = {"N": 1}
-        strat_p1 = {"N": 1}
-        queue.enqueue("N")
+        strat_p0 = {"A": 1}
+        strat_p1 = {"A": 1}
+        queue.enqueue("A")
         while not queue.is_empty():
             node = queue.dequeue()
             p = self.P(node)
@@ -252,14 +234,36 @@ class game:
                     strat_p1[neighbor] = strat_p1[node]*sigma[a]
         return strat_p0, strat_p1
 
-    def exploit(self, node, p, p_not, M_r, strat_tree, exp_tree):
-        util_tree = {}
+    def exploit_p0(self, node, strat_p0):
+        v_tree = {}
+        prob = np.zeros(2)
+        sigmas = np.zeros(3,3)
+        for level in ["IJ", "EFGH", "CD", "B"]:
+            for node in level:
+                for hand in range(3):
+                    iset = self.iset_p1[hand]
+                    for i in range(2):
+                        node = node + iset[i]
+                        if self.is_terminal(node):
+                            v_tree[node] = self.util(node, 1)
+                        elif self.P(node) == 0:
+                            for 
+
+                        prob[i] = strat_p0[node + iset[i]]
+                        value[i] = self.value(node + iset[i])
+                    prob /= prob.sum()
+                    expected = np.dot(prob, value)
+                    v_tree[node + iset[0]] = expected
+                    v_tree[node + iset[1]] = expected
+
+
+        v_tree = {}
         F_util = np.zeros((6, 2))
         sigma = np.zeros((6, 2))
         for i in range(6):
             perm = game.all_perms[i]
             game.cards = np.array([perm])
-            util = (game.util("I", 0), game.util("J", 0))
+            value = (game.util("I", 0), game.util("J", 0))
             sigma[i, np.argmax(util)] = strat["C"][perm[1], 2]/
             per_p = per_p_not
         elif game.P(node) == p:
