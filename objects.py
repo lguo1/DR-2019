@@ -103,25 +103,46 @@ class model:
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0; check 1; bet 2.
+
+def create_subtree(tree, key):
+    tree["B" + key] = ["", "C" + key, "D" + key]
+    tree["C" + key] = ["", "E" + key, "F" + key]
+    tree["D" + key] = ["G" + key, "", "H" + key]
+    tree["F" + key] = ["I" + key, "", "J" + key]
+
+class node:
+    def __init__(self, info=None, actions=None):
+        self.info = info
+        self.fold = None
+        self.check = None
+        self.bet = None
+        self.next = [self.fold, self.check, self.bet]
+        self.actions = actions
+class root:
+    def __init__(self):
+        self.next = [self.ab, self.ac, self.ba, self.bc, self.ca, self.cb]
+
+def create_subtree(root, child_ind):
+    B = node([[0,0,0],[0,0,0]], [1,2])
+    root.next[child_ind] = B
+
 class game:
     def __init__(self):
-        self.all_perms = permutations(range(3),2)
-        self.tree = {
-        "B": ["", "C", "D"],
-        "C": ["", "E", "F"],
-        "D": ["G", "", "H"],
-        "F": ["I", "", "J"]
-        }
-        self.before = {
-        "I": "F",
-        "J": "F",
-        "E": "C",
-        "F": "C",
-        "G": "D",
-        "H": "D",
-        "C": "B",
-        "D": "B"
-        }
+        A = node()
+
+
+        B = node([[0,0,0],[0,0,0]], [1,2])
+
+        self.perms= ["01", "02", "10", "12", "20", "21"]
+        self.tree = {}
+        perm_lst = []
+        for perm in self.perms:
+            perm_lst.append("B" + perm)
+            create_subtree(tree, perm)
+        self.tree["A": perm_lst]
+
+        self.terminal = "EIJGH"
+
         self.info = {
         "B": [[0,0,0],[0,0,0]],
         "C": [[1,0,0],[1,0,0]],
@@ -133,29 +154,27 @@ class game:
         "I": [[1,2,1],[1,1,1]],
         "J": [[1,2,2],[1,1,1]]
         }
+
         self.available = {
         "B": [1,2],
         "C": [1,2],
         "D": [0,2],
         "F": [0,2]
-                        }
-        self.layers = ["B","CD","EFGH","IJ"]
-        self.terminal = "EIJGH"
+        }
 
     def deal(self):
-        self.cards = np.random.choice(3,(2,1),replace=False)
-        return self
+         return self.tree["N"][np.random.choice(6, 1)]
 
     def util(self, node, p):
-        if node == "E":
+        if node[0] == "E":
             return (p == np.argmax(self.cards))*2-1
-        elif node == "I":
+        elif node[0] == "I":
             return [-1,1][p]
-        elif node == "J":
+        elif node[0] == "J":
             return (p == np.argmax(self.cards))*4-2
-        elif node == "G":
+        elif node[0] == "G":
             return [1,-1][p]
-        elif node == "H":
+        elif node[0] == "H":
             return (p == np.argmax(self.cards))*4-2
         else:
             return None
@@ -164,15 +183,92 @@ class game:
         return self.tree[node][action]
 
     def A(self, node):
-        return self.available[node]
+        return self.available[node[0]]
 
     def P(self, node):
-        if node in ["C", "D"]:
+        if node[0] in ["C", "D"]:
             return 1
-        elif node in ["B", "F"]:
+        elif node[0] in ["B", "F"]:
             return 0
         else:
             return None
 
     def I(self, node, p):
-        return (self.cards[p], *self.info[node])
+        return (node[p+1], *self.info[node[0]])
+
+    def is_terminal(self, node):
+        return node[0] in self.terminal
+
+    def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
+        if self.is_terminal(node):
+            return self.util(node, p)
+        elif self.P(node) == p:
+            I = self.I(node, p)
+            A = self.A(node)
+            sigma = calculate_strategy(I, A, M_r[p])
+            v_a = np.zeros(3)
+            for a in A:
+                v_a[a] = self.collect_samples(self.take(node, a), p, p_not, M_r, B_vp, B_s)
+            v_s = np.dot(v_a, sigma)
+            d = v_a - v_s
+            B_vp.add(I, d)
+            return v_s
+        elif self.P(node) == p_not:
+            I = self.I(node, p_not)
+            A = self.A(node)
+            sigma = calculate_strategy(I, A, M_r[p_not])
+            B_s.add(I, sigma)
+            try:
+                a = np.random.choice(3, p=sigma)
+            except ValueError:
+                a = np.random.choice(3, p=sigma/sigma.sum())
+            return self.collect_samples(self.take(node, a), p, p_not, M_r, B_vp, B_s)
+        else:
+            return self.collect_samples(self.deal(), p, p_not, M_r, B_vp, B_s)
+
+    def build_strat(self, M_r):
+        queue = Queue()
+        strat_p0 = {"N": 1}
+        strat_p1 = {"N": 1}
+        queue.enqueue("N")
+        while not queue.is_empty():
+            node = queue.dequeue()
+            p = self.P(node)
+            A = self.A(node)
+            I = self.I(node, p)
+            sigma = calculate_strategy(I, A, M_r[p])
+            for a in A:
+                neighbor = self.take(node, a)
+                if not neighbor.is_terminal():
+                    queue.enqueue(neighbor)
+                if neighbor[0] == "B":
+                    strat_p0[neighbor] = 1/6
+                    strat_p1[neighbor] = 1/6
+                elif p == 0:
+                    strat_p0[neighbor] = strat_p0[node]*sigma[a]
+                    strat_p1[neighbor] = strat_p1[node]
+                elif p == 1:
+                    strat_p0[neighbor] = strat_p1[node]
+                    strat_p1[neighbor] = strat_p1[node]*sigma[a]
+        return strat_p0, strat_p1
+
+    def exploit(self, node, p, p_not, M_r, strat_tree, exp_tree):
+        util_tree = {}
+        F_util = np.zeros((6, 2))
+        sigma = np.zeros((6, 2))
+        for i in range(6):
+            perm = game.all_perms[i]
+            game.cards = np.array([perm])
+            util = (game.util("I", 0), game.util("J", 0))
+            sigma[i, np.argmax(util)] = strat["C"][perm[1], 2]/
+            per_p = per_p_not
+        elif game.P(node) == p:
+            for a in game.A(node):
+                next = game.take(node, a)
+                exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]*exp_tree[node][p, cards_i]
+                exploit(game, next, cards_i, strat, exp_tree)
+        elif game.P(node) == p_not:
+            for a in game.A(node):
+                next = game.take(node, a)
+                exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]
+                exploit(game, next, cards_i, strat, exp_tree)
