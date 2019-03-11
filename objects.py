@@ -94,7 +94,7 @@ class model:
     def restore(self):
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
-# fold 0; check 1; bet 2.
+# fold 0, check 1, bet 2.
 class node:
     def __init__(self, name):
         self.name = name
@@ -135,31 +135,8 @@ class node:
 
 class game:
     def __init__(self):
-        self.set_up
-
-        self.perms= ["01", "02", "10", "12", "20", "21"]
-        self.info = {
-        "B": [[0,0,0],[0,0,0]],
-        "C": [[1,0,0],[1,0,0]],
-        "D": [[2,0,0],[1,0,0]],
-        "F": [[1,2,0],[1,1,0]],
-        }
-        self.p0_set = [["01", "02"], ["10", "12"], ["20", "21"]]
-        self.p1_set = [["10", "20"], ["01", "21"], ["02", "12"]]
+        self.perms = ["01", "02", "10", "12", "20", "21"]
         self.terminal = "EIJGH"
-
-        self.inheritance = {
-        "C": "B1",
-        "D": "B2",
-        "E": "C1",
-        "F": "C2",
-        "G": "D0",
-        "H": "D2",
-        "I": "F0",
-        "J": "F2"
-        }
-
-    def set_up(self):
         tree = {}
         for card in self.perms:
             for g_node in "JIEFGHCDB":
@@ -201,114 +178,86 @@ class game:
         for i in range(6):
             A.neighbors[i] = tree["B"+self.perms[i]]
         tree["A"] = A
+        self.root = A
         self.tree = tree
-
-    def take(self, node, action):
-        return self.tree[node][action]
-
-    def A(self, node):
-        return self.available[node[0]]
-
-    def P(self, node):
-        if node[0] in ["C", "D"]:
-            return 1
-        elif node[0] in ["B", "F"]:
-            return 0
-        else:
-            return None
-
-    def I(self, node, p):
-        return (node.p, *self.info[node.name])
-
-    def is_terminal(self, node):
-        return node[0] in self.terminal
+        self.p0_set = [["01", "02"], ["10", "12"], ["20", "21"]]
+        self.p1_set = [["10", "20"], ["01", "21"], ["02", "12"]]
 
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
-        if self.is_terminal(node):
-            return self.util(node, p)
-        elif node.p == p:
-            I = self.I(node, p)
-            A = self.A(node)
+        if node.name in self.terminal:
+            return node.util(p)
+        elif node.P == p:
+            I = node.I(p)
+            A = node.A
             sigma = calculate_strategy(I, A, M_r[p])
             v_a = np.zeros(3)
             for a in A:
-                v_a[a] = self.collect_samples(self.take(node, a), p, p_not, M_r, B_vp, B_s)
+                v_a[a] = self.collect_samples(node.take(a), p, p_not, M_r, B_vp, B_s)
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
             B_vp.add(I, d)
             return v_s
-        elif node.p == p_not:
-            I = self.I(node, p_not)
-            A = self.A(node)
+        elif node.P == p_not:
+            I = node.I(p)
+            A = node.A
             sigma = calculate_strategy(I, A, M_r[p_not])
             B_s.add(I, sigma)
             try:
                 a = np.random.choice(3, p=sigma)
             except ValueError:
                 a = np.random.choice(3, p=sigma/sigma.sum())
-            return self.collect_samples(self.take(node, a), p, p_not, M_r, B_vp, B_s)
+            return self.collect_samples(node.take(a), p, p_not, M_r, B_vp, B_s)
         else:
-            return self.collect_samples(self.deal(), p, p_not, M_r, B_vp, B_s)
+            return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
 
-    def parent(self, child):
-        if child[0] == "B":
-            return "A", self.perms.index(child[1:3])
-        else:
-            return self.inheritance[child[0]]
-
-    def build_strat(self, M_r):
+    def calculate_prob(self, M_r):
         queue = Queue()
-        strat_p0 = {"A": 1}
-        strat_p1 = {"A": 1}
-        queue.enqueue("A")
+        queue.enqueue(self.root)
         while not queue.is_empty():
             node = queue.dequeue()
-            p = self.P(node)
-            A = self.A(node)
-            I = self.I(node, p)
+            p = node.P
+            A = node.A
+            I = node.I(p)
             sigma = calculate_strategy(I, A, M_r[p])
             for a in A:
-                neighbor = self.take(node, a)
-                if not neighbor.is_terminal():
+                neighbor = node.neighbors[a]
+                if neighbor.name[0] not in self.terminal:
                     queue.enqueue(neighbor)
-                if neighbor[0] == "B":
-                    strat_p0[neighbor] = 1/6
-                    strat_p1[neighbor] = 1/6
+                if neighbor.name[0] == "B":
+                    neighbor.p0_strat = 1/6
+                    neighbor.p1_strat = 1/6
                 elif p == 0:
-                    strat_p0[neighbor] = strat_p0[node]*sigma[a]
-                    strat_p1[neighbor] = strat_p1[node]
+                    neighbor.p0_strat = node.p0_strat*sigma[a]
+                    neighbor.p1_strat = node.p0_strat
                 elif p == 1:
-                    strat_p0[neighbor] = strat_p1[node]
-                    strat_p1[neighbor] = strat_p1[node]*sigma[a]
-        return strat_p0, strat_p1
+                    neighbor.p0_strat = node.p0_strat
+                    neighbor.p1_strat = node.p0_strat*sigma[a]
 
     def exploit_p0(self, node, strat_p0):
-        n_tree = self.build_n_tree()
         prob = np.zeros(2)
         sigmas = np.zeros(3,3)
-        for level in ["IJ", "EFGH", "CD", "B", "A"]:
-            for key in level:
-                for card in self.perms:
-                    node = key + card
-                    if self.is_terminal(node):
+        for g_node in "IJEFGHCDBA":
+            for card in self.perms:
+                node = key + card
+                if self.is_terminal(node):
+                    parent = self.parent(node)
+                    n_tree[parent[0]][parent[1]] = self.util(node, 1)
+                elif self.P(node) == 0:
+                    parent = self.parent(node)
+                    n_tree[parent[0]][parent[1]] = np.dot(n_tree[node], strat_p0[node])
+                elif self.P(node) == 1:
+                    probs = np.zeros(2)
+                    for i in range(2):
+                        i_node = key + card[self.p1_set[node[2][i]]
+                        probs[i] = strat_p0[i_node]
+                    probs = probs/probs.sum()
+                    for i in range(2):
                         parent = self.parent(node)
-                        n_tree[parent[0]][parent[1]] = self.util(node, 1)
-                    elif self.P(node) == 0:
-                        parent = self.parent(node)
-                        n_tree[parent[0]][parent[1]] = np.dot(n_tree[node], strat_p0[node])
-                    elif self.P(node) == 1:
-                        probs = np.zeros(2)
-                        for i in range(2):
-                            i_node = key + card[self.p1_set[node[2][i]]
-                            probs[i] = strat_p0[i_node]
-                        probs = probs/probs.sum()
-                        for i in range(2):
-                            parent = self.parent(node)
 
-                        parent = self.parent(node)
-                        n_tree[parent[0]][parent[1]] = np.max(n_tree[node])
-                    else:
-                        raise
+                    parent = self.parent(node)
+                    n_tree[parent[0]][parent[1]] = np.max(n_tree[node])
+                else:
+                    raise
 
 
 
@@ -342,14 +291,3 @@ def connect(input, weights, biases, activations):
         if activation is not None:
             layer = activation(layer)
     return layer
-def build_subtree(tree, key):
-    tree["B" + key] = ["", "C" + key, "D" + key]
-    tree["C" + key] = ["", "E" + key, "F" + key]
-    tree["D" + key] = ["G" + key, "", "H" + key]
-    tree["F" + key] = ["I" + key, "", "J" + key]
-
-def build_n_subtree(tree, key):
-    tree["B" + key] = np.zeros(3)
-    tree["C" + key] = np.zeros(3)
-    tree["D" + key] = np.zeros(3)
-    tree["F" + key] = np.zeros(3)
