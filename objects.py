@@ -96,47 +96,57 @@ class model:
 
 # fold 0; check 1; bet 2.
 class node:
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
+
+    def set_fold(self, child):
+        self.fold = child
+        child.before = [self, 0]
+
+    def set_check(self, child):
+        self.check = child
+        child.before = [self, 1]
+
+    def set_bet(self, child):
+        self.bet = child
+        child.before = [self, 2]
+
+    def deal(self):
+         return self.neighbors[np.random.choice(6, 1)]
+
+    def take(self, action):
+        return self.neighbors[action]
+
+    def util(self, p):
+        g_node = self.name[0]
+        cards = self.name[1:3]
+        if g_node  == "E":
+            return (p == np.argmax(cards))*2-1
+        elif g_node == "I":
+            return [-1,1][p]
+        elif g_node == "J":
+            return (p == np.argmax(cards))*4-2
+        elif g_node == "G":
+            return [1,-1][p]
+        elif g_node == "H":
+            return (p == np.argmax(cards))*4-2
+        else:
+            raise
 
 class game:
     def __init__(self):
-        self.tree = {}
-        for card in self.perms:
-            for g_node in "BCDEFGHIJ":
-                self.tree["%s%s"%(g_node, card)] = node()
-        self.set_up()
+        self.set_up
 
         self.perms= ["01", "02", "10", "12", "20", "21"]
-        self.tree = {}
-        perm_lst = []
-        for perm in self.perms:
-            perm_lst.append("B" + perm)
-            build_subtree(tree, perm)
-        self.tree["A": perm_lst]
-
-        self.terminal = "EIJGH"
-
         self.info = {
         "B": [[0,0,0],[0,0,0]],
         "C": [[1,0,0],[1,0,0]],
         "D": [[2,0,0],[1,0,0]],
-        "E": [[1,1,0],[1,1,0]],
         "F": [[1,2,0],[1,1,0]],
-        "G": [[2,0,0],[1,1,0]],
-        "H": [[2,2,0],[1,1,0]],
-        "I": [[1,2,1],[1,1,1]],
-        "J": [[1,2,2],[1,1,1]]
         }
-
         self.p0_set = [["01", "02"], ["10", "12"], ["20", "21"]]
         self.p1_set = [["10", "20"], ["01", "21"], ["02", "12"]]
-
-        self.available = {
-        "B": [1,2],
-        "C": [1,2],
-        "D": [0,2],
-        "F": [0,2]
-        }
+        self.terminal = "EIJGH"
 
         self.inheritance = {
         "C": "B1",
@@ -149,39 +159,49 @@ class game:
         "J": "F2"
         }
 
-    def set_up():
-        for key in self.tree:
-            g_node = key[0]
-            card = key[1:3]
-            if g_node == "B":
-                self.tree[key].check = self.
-
-
-
-    def build_n_tree():
-        tree = {
-        A = np.zeros(6)
-        }
-        for perm in self.perms:
-            build_n_subtree(tree, perm)
-        return n_tree
-
-    def deal(self):
-         return self.tree["A"][np.random.choice(6, 1)]
-
-    def util(self, node, p):
-        if node[0] == "E":
-            return (p == np.argmax(self.cards))*2-1
-        elif node[0] == "I":
-            return [-1,1][p]
-        elif node[0] == "J":
-            return (p == np.argmax(self.cards))*4-2
-        elif node[0] == "G":
-            return [1,-1][p]
-        elif node[0] == "H":
-            return (p == np.argmax(self.cards))*4-2
-        else:
-            return None
+    def set_up(self):
+        tree = {}
+        for card in self.perms:
+            for g_node in "JIEFGHCDB":
+                key = g_node + card
+                node = node(key)
+                self.tree[key] = node
+                if g_node == "B":
+                    node.set_check(tree["C"+card])
+                    node.set_bet(tree["D"+card])
+                    node.neighbors = [None, node.check, node.bet]
+                    node.P = 0
+                    node.A = [1,2]
+                    node.info = ([0,0,0],[0,0,0])
+                elif g_node == "C":
+                    node.set_check(tree["E"+card])
+                    node.set_bet(tree["F"+card])
+                    node.neighbors = [None, node.check, node.bet]
+                    node.P = 1
+                    node.A = [1,2]
+                    node.info = ([1,0,0],[1,0,0])
+                elif g_node == "D":
+                    node.set_fold(tree["G"+card])
+                    node.set_bet(tree["H"+card])
+                    node.neighbors = [node.fold, None, node.bet]
+                    node.P = 1
+                    node.A = [0,2]
+                    node.info = ([2,0,0],[1,0,0])
+                elif g_node == "F":
+                    node.set_fold(tree["I"+card])
+                    node.set_bet(tree["J"+card])
+                    node.neighbors = [node.fold, None, node.bet]
+                    node.P = 0
+                    node.A = [0,2]
+                    node.info = ([1,2,0],[1,1,0])
+                else:
+                    pass
+        A = node()
+        A.neighbors = [A.IJ, A.IK, A.JI, A.JK, A.KI, A.KJ]
+        for i in range(6):
+            A.neighbors[i] = tree["B"+self.perms[i]]
+        tree["A"] = A
+        self.tree = tree
 
     def take(self, node, action):
         return self.tree[node][action]
@@ -198,7 +218,7 @@ class game:
             return None
 
     def I(self, node, p):
-        return (node[p+1], *self.info[node[0]])
+        return (node.p, *self.info[node.name])
 
     def is_terminal(self, node):
         return node[0] in self.terminal
@@ -206,7 +226,7 @@ class game:
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
         if self.is_terminal(node):
             return self.util(node, p)
-        elif self.P(node) == p:
+        elif node.p == p:
             I = self.I(node, p)
             A = self.A(node)
             sigma = calculate_strategy(I, A, M_r[p])
@@ -217,7 +237,7 @@ class game:
             d = v_a - v_s
             B_vp.add(I, d)
             return v_s
-        elif self.P(node) == p_not:
+        elif node.p == p_not:
             I = self.I(node, p_not)
             A = self.A(node)
             sigma = calculate_strategy(I, A, M_r[p_not])
