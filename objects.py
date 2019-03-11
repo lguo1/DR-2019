@@ -118,61 +118,64 @@ class node:
         return self.neighbors[action]
 
     def util(self, p):
-        g_node = self.name[0]
-        cards = self.name[1:3]
-        if g_node  == "E":
-            return (p == np.argmax(cards))*2-1
-        elif g_node == "I":
-            return [-1,1][p]
-        elif g_node == "J":
-            return (p == np.argmax(cards))*4-2
-        elif g_node == "G":
-            return [1,-1][p]
-        elif g_node == "H":
-            return (p == np.argmax(cards))*4-2
-        else:
-            raise
-
+        return self.U[p]
+        
 class game:
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.terminal = "EIJGH"
         tree = {}
-        for card in self.perms:
+        for perm in self.perms:
             for g_node in "JIEFGHCDB":
-                key = g_node + card
+                key = g_node + perm
                 node = node(key)
                 self.tree[key] = node
                 if g_node == "B":
-                    node.set_check(tree["C"+card])
-                    node.set_bet(tree["D"+card])
+                    node.set_check(tree["C"+perm])
+                    node.set_bet(tree["D"+perm])
                     node.neighbors = [None, node.check, node.bet]
                     node.P = 0
                     node.A = [1,2]
                     node.info = ([0,0,0],[0,0,0])
                 elif g_node == "C":
-                    node.set_check(tree["E"+card])
-                    node.set_bet(tree["F"+card])
+                    node.set_check(tree["E"+perm])
+                    node.set_bet(tree["F"+perm])
                     node.neighbors = [None, node.check, node.bet]
                     node.P = 1
                     node.A = [1,2]
                     node.info = ([1,0,0],[1,0,0])
                 elif g_node == "D":
-                    node.set_fold(tree["G"+card])
-                    node.set_bet(tree["H"+card])
+                    node.set_fold(tree["G"+perm])
+                    node.set_bet(tree["H"+perm])
                     node.neighbors = [node.fold, None, node.bet]
                     node.P = 1
                     node.A = [0,2]
                     node.info = ([2,0,0],[1,0,0])
                 elif g_node == "F":
-                    node.set_fold(tree["I"+card])
-                    node.set_bet(tree["J"+card])
+                    node.set_fold(tree["I"+perm])
+                    node.set_bet(tree["J"+perm])
                     node.neighbors = [node.fold, None, node.bet]
                     node.P = 0
                     node.A = [0,2]
                     node.info = ([1,2,0],[1,1,0])
+                elif g_node == "E":
+                    util = [-1,-1]
+                    util[np.argmax(perm)] = 1
+                    node.U = util
+                elif g_node == "I":
+                    node.U = [-1,1]
+                elif g_node == "J":
+                    util = [-2,-2]
+                    util[np.argmax(perm)] = 2
+                    node.U = util
+                elif g_node == "G":
+                    node.U = [1,-1]
+                elif g_node == "H":
+                    util = [-2,-2]
+                    util[np.argmax(perm)] = 2
+                    node.U = util
                 else:
-                    pass
+                    raise
         A = node()
         A.neighbors = [A.IJ, A.IK, A.JI, A.JK, A.KI, A.KJ]
         for i in range(6):
@@ -233,13 +236,14 @@ class game:
                     neighbor.p0_strat = node.p0_strat
                     neighbor.p1_strat = node.p0_strat*sigma[a]
 
-    def exploit_p0(self, node, strat_p0):
+    def exploit_p0(self):
         prob = np.zeros(2)
         sigmas = np.zeros(3,3)
         for g_node in "IJEFGHCDBA":
-            for card in self.perms:
-                node = key + card
-                if self.is_terminal(node):
+            for perm in self.perms:
+                key = g_node + perm
+                node = self.tree[key]
+                if g_node in self.terminal:
                     parent = self.parent(node)
                     n_tree[parent[0]][parent[1]] = self.util(node, 1)
                 elif self.P(node) == 0:
@@ -248,7 +252,7 @@ class game:
                 elif self.P(node) == 1:
                     probs = np.zeros(2)
                     for i in range(2):
-                        i_node = key + card[self.p1_set[node[2][i]]
+                        i_node = key + perm[self.p1_set[node[2][i]]
                         probs[i] = strat_p0[i_node]
                     probs = probs/probs.sum()
                     for i in range(2):
