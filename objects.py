@@ -23,14 +23,6 @@ class buffer:
     def sample(self, indices):
         return (itemgetter(*indices)(self.list[0]), itemgetter(*indices)(self.list[1]), itemgetter(*indices)(self.list[2]), itemgetter(*indices)(self.list[3]))
 
-def connect(input, weights, biases, activations):
-    layer = input
-    for W, b, activation in zip(weights, biases, activations):
-        layer = tf.matmul(layer, W) + b
-        if activation is not None:
-            layer = activation(layer)
-    return layer
-
 class model:
     def __init__(self, name, softmax=False):
         self.name = name
@@ -103,21 +95,23 @@ class model:
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0; check 1; bet 2.
-
-def create_subtree(tree, key):
-    tree["B" + key] = ["", "C" + key, "D" + key]
-    tree["C" + key] = ["", "E" + key, "F" + key]
-    tree["D" + key] = ["G" + key, "", "H" + key]
-    tree["F" + key] = ["I" + key, "", "J" + key]
+class node:
+    def __init__(self):
 
 class game:
     def __init__(self):
+        self.tree = {}
+        for card in self.perms:
+            for g_node in "BCDEFGHIJ":
+                self.tree["%s%s"%(g_node, card)] = node()
+        self.set_up()
+
         self.perms= ["01", "02", "10", "12", "20", "21"]
         self.tree = {}
         perm_lst = []
         for perm in self.perms:
             perm_lst.append("B" + perm)
-            create_subtree(tree, perm)
+            build_subtree(tree, perm)
         self.tree["A": perm_lst]
 
         self.terminal = "EIJGH"
@@ -143,6 +137,34 @@ class game:
         "D": [0,2],
         "F": [0,2]
         }
+
+        self.inheritance = {
+        "C": "B1",
+        "D": "B2",
+        "E": "C1",
+        "F": "C2",
+        "G": "D0",
+        "H": "D2",
+        "I": "F0",
+        "J": "F2"
+        }
+
+    def set_up():
+        for key in self.tree:
+            g_node = key[0]
+            card = key[1:3]
+            if g_node == "B":
+                self.tree[key].check = self.
+
+
+
+    def build_n_tree():
+        tree = {
+        A = np.zeros(6)
+        }
+        for perm in self.perms:
+            build_n_subtree(tree, perm)
+        return n_tree
 
     def deal(self):
          return self.tree["A"][np.random.choice(6, 1)]
@@ -208,6 +230,12 @@ class game:
         else:
             return self.collect_samples(self.deal(), p, p_not, M_r, B_vp, B_s)
 
+    def parent(self, child):
+        if child[0] == "B":
+            return "A", self.perms.index(child[1:3])
+        else:
+            return self.inheritance[child[0]]
+
     def build_strat(self, M_r):
         queue = Queue()
         strat_p0 = {"A": 1}
@@ -235,26 +263,34 @@ class game:
         return strat_p0, strat_p1
 
     def exploit_p0(self, node, strat_p0):
-        v_tree = {}
+        n_tree = self.build_n_tree()
         prob = np.zeros(2)
         sigmas = np.zeros(3,3)
-        for level in ["IJ", "EFGH", "CD", "B"]:
-            for node in level:
-                for hand in range(3):
-                    iset = self.iset_p1[hand]
-                    for i in range(2):
-                        node = node + iset[i]
-                        if self.is_terminal(node):
-                            v_tree[node] = self.util(node, 1)
-                        elif self.P(node) == 0:
-                            for 
+        for level in ["IJ", "EFGH", "CD", "B", "A"]:
+            for key in level:
+                for card in self.perms:
+                    node = key + card
+                    if self.is_terminal(node):
+                        parent = self.parent(node)
+                        n_tree[parent[0]][parent[1]] = self.util(node, 1)
+                    elif self.P(node) == 0:
+                        parent = self.parent(node)
+                        n_tree[parent[0]][parent[1]] = np.dot(n_tree[node], strat_p0[node])
+                    elif self.P(node) == 1:
+                        probs = np.zeros(2)
+                        for i in range(2):
+                            i_node = key + card[self.p1_set[node[2][i]]
+                            probs[i] = strat_p0[i_node]
+                        probs = probs/probs.sum()
+                        for i in range(2):
+                            parent = self.parent(node)
 
-                        prob[i] = strat_p0[node + iset[i]]
-                        value[i] = self.value(node + iset[i])
-                    prob /= prob.sum()
-                    expected = np.dot(prob, value)
-                    v_tree[node + iset[0]] = expected
-                    v_tree[node + iset[1]] = expected
+                        parent = self.parent(node)
+                        n_tree[parent[0]][parent[1]] = np.max(n_tree[node])
+                    else:
+                        raise
+
+
 
 
         v_tree = {}
@@ -276,3 +312,24 @@ class game:
                 next = game.take(node, a)
                 exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]
                 exploit(game, next, cards_i, strat, exp_tree)
+
+
+
+def connect(input, weights, biases, activations):
+    layer = input
+    for W, b, activation in zip(weights, biases, activations):
+        layer = tf.matmul(layer, W) + b
+        if activation is not None:
+            layer = activation(layer)
+    return layer
+def build_subtree(tree, key):
+    tree["B" + key] = ["", "C" + key, "D" + key]
+    tree["C" + key] = ["", "E" + key, "F" + key]
+    tree["D" + key] = ["G" + key, "", "H" + key]
+    tree["F" + key] = ["I" + key, "", "J" + key]
+
+def build_n_subtree(tree, key):
+    tree["B" + key] = np.zeros(3)
+    tree["C" + key] = np.zeros(3)
+    tree["D" + key] = np.zeros(3)
+    tree["F" + key] = np.zeros(3)

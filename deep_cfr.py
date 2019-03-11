@@ -50,9 +50,6 @@ def best_response(game, node, p, p_not, M_r):
     sigma[A[np.argmax(d)]] = 1
     return sigma
 
-
-
-
 def term_util(game, node):
     all_util = np.zeros(6,2)
 
