@@ -117,9 +117,6 @@ class node:
     def take(self, action):
         return self.neighbors[action]
 
-    def util(self, p):
-        return self.U[p]
-        
 class game:
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
@@ -176,7 +173,7 @@ class game:
                     node.U = util
                 else:
                     raise
-        A = node()
+        A = node("A")
         A.neighbors = [A.IJ, A.IK, A.JI, A.JK, A.KI, A.KJ]
         for i in range(6):
             A.neighbors[i] = tree["B"+self.perms[i]]
@@ -224,17 +221,14 @@ class game:
             sigma = calculate_strategy(I, A, M_r[p])
             for a in A:
                 neighbor = node.neighbors[a]
-                if neighbor.name[0] not in self.terminal:
-                    queue.enqueue(neighbor)
-                if neighbor.name[0] == "B":
-                    neighbor.p0_strat = 1/6
-                    neighbor.p1_strat = 1/6
-                elif p == 0:
-                    neighbor.p0_strat = node.p0_strat*sigma[a]
-                    neighbor.p1_strat = node.p0_strat
+                if p == 0:
+                    neighbor.p0_prob = sigma[a]*node.p0_prob
+                    neighbor.p1_prob = node.p1_prob
                 elif p == 1:
-                    neighbor.p0_strat = node.p0_strat
-                    neighbor.p1_strat = node.p0_strat*sigma[a]
+                    neighbor.p0_prob = node.p0_prob
+                    neighbor.p1_prob = sigma[a]*node.p1_prob
+                else:
+                    raise
 
     def exploit_p0(self):
         prob = np.zeros(2)
@@ -243,48 +237,26 @@ class game:
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
+                before = node.before
                 if g_node in self.terminal:
-                    parent = self.parent(node)
-                    n_tree[parent[0]][parent[1]] = self.util(node, 1)
-                elif self.P(node) == 0:
-                    parent = self.parent(node)
-                    n_tree[parent[0]][parent[1]] = np.dot(n_tree[node], strat_p0[node])
-                elif self.P(node) == 1:
-                    probs = np.zeros(2)
+                    node.p1_value = node.U[1]
+                elif node.P == 0:
+                    expected = 0
+                    for a in node.A:
+                        neighbor = node.neighbors[a]
+                        expected += neighbor.p0_prob*neighbor.p1_value
+                    node.p1_value = expected
+                elif node.P == 1:
+                    sigma = np.zeros(3)
+                    avalue = np.zeros((3,2))
                     for i in range(2):
-                        i_node = key + perm[self.p1_set[node[2][i]]
-                        probs[i] = strat_p0[i_node]
-                    probs = probs/probs.sum()
-                    for i in range(2):
-                        parent = self.parent(node)
-
-                    parent = self.parent(node)
-                    n_tree[parent[0]][parent[1]] = np.max(n_tree[node])
-                else:
-                    raise
-
-
-
-
-        v_tree = {}
-        F_util = np.zeros((6, 2))
-        sigma = np.zeros((6, 2))
-        for i in range(6):
-            perm = game.all_perms[i]
-            game.cards = np.array([perm])
-            value = (game.util("I", 0), game.util("J", 0))
-            sigma[i, np.argmax(util)] = strat["C"][perm[1], 2]/
-            per_p = per_p_not
-        elif game.P(node) == p:
-            for a in game.A(node):
-                next = game.take(node, a)
-                exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]*exp_tree[node][p, cards_i]
-                exploit(game, next, cards_i, strat, exp_tree)
-        elif game.P(node) == p_not:
-            for a in game.A(node):
-                next = game.take(node, a)
-                exp_tree[next][p, cards_i] = strat[node][game.all_cards[cards_i][p]][a]
-                exploit(game, next, cards_i, strat, exp_tree)
+                        key = g_node + key.p1_set[i]
+                        node = self.tree[key]
+                        sigma[np.argmax(node.avalue[1])] += node.p0_prob
+                        avalue[i] = node.avalue[1]
+                    sigma /= np.sum(sigma)
+                    node.svalue[1] = np.sum(sigma*avalue)
+        return self.root.svalued[1]
 
 
 
