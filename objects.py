@@ -123,7 +123,7 @@ class game:
         self.terminal = "EIJGH"
         tree = {}
         for perm in self.perms:
-            for g_node in "JIEFGHCDB":
+            for g_node in "JIHGFEDCB":
                 key = g_node + perm
                 node = node(key)
                 tree[key] = node
@@ -175,6 +175,7 @@ class game:
                     raise
         A = node("A")
         A.neighbors = [A.IJ, A.IK, A.JI, A.JK, A.KI, A.KJ]
+        A.svalue
         for i in range(6):
             A.neighbors[i] = tree["B"+self.perms[i]]
         tree["A"] = A
@@ -186,8 +187,8 @@ class game:
         return self.i_set[p, perm[p+1]]
 
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
-        if node.name in self.terminal:
-            return node.util(p)
+        if node.name[0] in self.terminal:
+            return node.U[p]
         elif node.P == p:
             I = node.I(p)
             A = node.A
@@ -212,7 +213,7 @@ class game:
         else:
             return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
 
-    def forward_update(self, M_r):
+    def calculate_prob(self, M_r):
         queue = Queue()
         queue.enqueue(self.root)
         while not queue.is_empty():
@@ -230,14 +231,14 @@ class game:
                     neighbor.prob[0] = node.prob[0]
                     neighbor.prob[1] = sigma[a]*node.prob[1]
                 else:
-                    raise
+                    neighbor.prob[0] = sigma[a]*node.prob[0]
+                    neighbor.prob[1] = sigma[a]*node.prob[1]
 
-    def backward_update(self):
+    def exploit_p0(self):
         for g_node in "IJEFGHCDBA":
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
-                before = node.before
                 if g_node in self.terminal:
                     node.svalue[1] = node.U[1]
                 elif node.P == 0 or node.name == "A":
@@ -260,7 +261,37 @@ class game:
                     n_set[1].svalue[1] = n_set[0].svalue[1]
                 else:
                     raise
-        return self.root.svalue
+        return self.root.svalue[1]
+
+    def exploit_p1(self):
+        for g_node in "IJEFGHCDBA":
+            for perm in self.perms:
+                key = g_node + perm
+                node = self.tree[key]
+                if g_node in self.terminal:
+                    node.svalue[0] = node.U[0]
+                elif node.P == 1 or node.name == "A":
+                    expected = 0
+                    for a in node.A:
+                        neighbor = node.neighbors[a]
+                        expected += neighbor.prob[1]*neighbor.svalue[0]
+                    node.svalue[1] = expected
+                elif node.P == 0:
+                    sigma = np.zeros(3)
+                    avalue = np.zeros((2,3))
+                    n_set = []
+                    for i in range(2):
+                        i_node = self.tree[g_node + self.i_set(0, perm)[i]]
+                        n_set.append(i_node)
+                        for a in i_node.A:
+                            avalue[i,a] = i_node.neighbors[a].svalue[0]
+                        sigma[np.argmax(avalue[i])] += i_node.prob[1]
+                    n_set[0].svalue[0] = np.sum(sigma*avalue)/np.sum(sigma)
+                    n_set[1].svalue[0] = n_set[0].svalue[0]
+                else:
+                    raise
+        return self.root.svalue[0]
+
 
 def connect(input, weights, biases, activations):
     layer = input
