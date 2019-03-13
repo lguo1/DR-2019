@@ -126,7 +126,7 @@ class game:
             for g_node in "JIEFGHCDB":
                 key = g_node + perm
                 node = node(key)
-                self.tree[key] = node
+                tree[key] = node
                 if g_node == "B":
                     node.set_check(tree["C"+perm])
                     node.set_bet(tree["D"+perm])
@@ -180,8 +180,10 @@ class game:
         tree["A"] = A
         self.root = A
         self.tree = tree
-        self.p0_set = [["01", "02"], ["10", "12"], ["20", "21"]]
-        self.p1_set = [["10", "20"], ["01", "21"], ["02", "12"]]
+        self.i_set = [[["01", "02"], ["10", "12"], ["20", "21"]], [["10", "20"], ["01", "21"], ["02", "12"]]]
+
+    def i_set(self, p, perm):
+        return self.i_set[p, perm[p+1]]
 
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
         if node.name in self.terminal:
@@ -210,7 +212,7 @@ class game:
         else:
             return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
 
-    def calculate_prob(self, M_r):
+    def forward_update(self, M_r):
         queue = Queue()
         queue.enqueue(self.root)
         while not queue.is_empty():
@@ -222,43 +224,43 @@ class game:
             for a in A:
                 neighbor = node.neighbors[a]
                 if p == 0:
-                    neighbor.p0_prob = sigma[a]*node.p0_prob
-                    neighbor.p1_prob = node.p1_prob
+                    neighbor.prob[0] = sigma[a]*node.prob[0]
+                    neighbor.prob[1] = node.prob[1]
                 elif p == 1:
-                    neighbor.p0_prob = node.p0_prob
-                    neighbor.p1_prob = sigma[a]*node.p1_prob
+                    neighbor.prob[0] = node.prob[0]
+                    neighbor.prob[1] = sigma[a]*node.prob[1]
                 else:
                     raise
 
-    def exploit_p0(self):
-        prob = np.zeros(2)
-        sigmas = np.zeros(3,3)
+    def backward_update(self):
         for g_node in "IJEFGHCDBA":
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
                 before = node.before
                 if g_node in self.terminal:
-                    node.p1_value = node.U[1]
-                elif node.P == 0:
+                    node.svalue[1] = node.U[1]
+                elif node.P == 0 or node.name == "A":
                     expected = 0
                     for a in node.A:
                         neighbor = node.neighbors[a]
-                        expected += neighbor.p0_prob*neighbor.p1_value
-                    node.p1_value = expected
+                        expected += neighbor.prob[0]*neighbor.svalue[1]
+                    node.svalue[1] = expected
                 elif node.P == 1:
                     sigma = np.zeros(3)
-                    avalue = np.zeros((3,2))
+                    avalue = np.zeros((2,3))
+                    n_set = []
                     for i in range(2):
-                        key = g_node + key.p1_set[i]
-                        node = self.tree[key]
-                        sigma[np.argmax(node.avalue[1])] += node.p0_prob
-                        avalue[i] = node.avalue[1]
-                    sigma /= np.sum(sigma)
-                    node.svalue[1] = np.sum(sigma*avalue)
-        return self.root.svalued[1]
-
-
+                        i_node = self.tree[g_node + self.i_set(1, perm)[i]]
+                        n_set.append(i_node)
+                        for a in i_node.A:
+                            avalue[i,a] = i_node.neighbors[a].svalue[1]
+                        sigma[np.argmax(avalue[i])] += i_node.prob[0]
+                    n_set[0].svalue[1] = np.sum(sigma*avalue)/np.sum(sigma)
+                    n_set[1].svalue[1] = n_set[0].svalue[1]
+                else:
+                    raise
+        return self.root.svalue
 
 def connect(input, weights, biases, activations):
     layer = input
@@ -266,4 +268,4 @@ def connect(input, weights, biases, activations):
         layer = tf.matmul(layer, W) + b
         if activation is not None:
             layer = activation(layer)
-    return layer
+    return layers
