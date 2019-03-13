@@ -1,4 +1,4 @@
-Aimport tensorflow as tf
+import tensorflow as tf
 import numpy as np
 from operator import itemgetter
 
@@ -87,7 +87,7 @@ class model:
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
             if training_step % 1000 == 0:
-                print('%s: mse: %0.3f'%(self.name, mse_run))
+                print("     %s: mse: %0.3f"%(self.name, mse_run))
             if save:
                 self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
 
@@ -95,29 +95,48 @@ class model:
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
 # fold 0, check 1, bet 2.
-class node:
+class Node:
     def __init__(self, name):
         self.name = name
+        self.A = None
+        self.P = None
 
     def set_fold(self, child):
         self.fold = child
         child.before = [self, 0]
+        return child
 
     def set_check(self, child):
         self.check = child
         child.before = [self, 1]
+        return child
 
     def set_bet(self, child):
         self.bet = child
         child.before = [self, 2]
+        return child
 
     def deal(self):
-         return self.neighbors[np.random.choice(6, 1)]
+        return self.neighbors[np.random.choice(6)]
 
     def take(self, action):
         return self.neighbors[action]
 
-class game:
+    def I(self, p):
+        return ([int(self.name[p+1])], *self.info)
+
+    def rootify(self, tree):
+        self.IJ = tree["B01"]
+        self.IK = tree["B02"]
+        self.JI = tree["B10"]
+        self.JK = tree["B12"]
+        self.KI = tree["B21"]
+        self.KJ = tree["B20"]
+        self.neighbors = [self.IJ, self.IK, self.JI, self.JK, self.KI, self.KJ]
+        tree[self.name] = self
+        return self
+
+class Game:
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.terminal = "EIJGH"
@@ -125,33 +144,25 @@ class game:
         for perm in self.perms:
             for g_node in "JIHGFEDCB":
                 key = g_node + perm
-                node = node(key)
+                node = Node(key)
                 tree[key] = node
                 if g_node == "B":
-                    node.set_check(tree["C"+perm])
-                    node.set_bet(tree["D"+perm])
-                    node.neighbors = [None, node.check, node.bet]
+                    node.neighbors = [None, node.set_check(tree["C"+perm]), node.set_bet(tree["D"+perm])]
                     node.P = 0
                     node.A = [1,2]
                     node.info = ([0,0,0],[0,0,0])
                 elif g_node == "C":
-                    node.set_check(tree["E"+perm])
-                    node.set_bet(tree["F"+perm])
-                    node.neighbors = [None, node.check, node.bet]
+                    node.neighbors = [None, node.set_check(tree["E"+perm]), node.set_bet(tree["F"+perm])]
                     node.P = 1
                     node.A = [1,2]
                     node.info = ([1,0,0],[1,0,0])
                 elif g_node == "D":
-                    node.set_fold(tree["G"+perm])
-                    node.set_bet(tree["H"+perm])
-                    node.neighbors = [node.fold, None, node.bet]
+                    node.neighbors = [node.set_fold(tree["G"+perm]), None, node.set_bet(tree["H"+perm])]
                     node.P = 1
                     node.A = [0,2]
                     node.info = ([2,0,0],[1,0,0])
                 elif g_node == "F":
-                    node.set_fold(tree["I"+perm])
-                    node.set_bet(tree["J"+perm])
-                    node.neighbors = [node.fold, None, node.bet]
+                    node.neighbors = [node.set_fold(tree["I"+perm]), None, node.set_bet(tree["J"+perm])]
                     node.P = 0
                     node.A = [0,2]
                     node.info = ([1,2,0],[1,1,0])
@@ -173,13 +184,8 @@ class game:
                     node.U = util
                 else:
                     raise
-        A = node("A")
-        A.neighbors = [A.IJ, A.IK, A.JI, A.JK, A.KI, A.KJ]
-        A.svalue
-        for i in range(6):
-            A.neighbors[i] = tree["B"+self.perms[i]]
-        tree["A"] = A
-        self.root = A
+        A = Node("A")
+        self.root = A.rootify(tree)
         self.tree = tree
         self.i_set = [[["01", "02"], ["10", "12"], ["20", "21"]], [["10", "20"], ["01", "21"], ["02", "12"]]]
 
@@ -298,4 +304,15 @@ def connect(input, weights, biases, activations):
         layer = tf.matmul(layer, W) + b
         if activation is not None:
             layer = activation(layer)
-    return layers
+    return layer
+
+def calculate_strategy(I, A, model):
+    sigma = np.zeros(3)
+    d = model.predict(I)[0, A]
+    d_plus = np.clip(d, 0, None)
+    if d_plus.sum() > 0:
+        sigma[A] = d_plus/d_plus.sum()
+        return sigma
+    else:
+        sigma[A[np.argmax(d)]] = 1
+        return sigma
