@@ -89,10 +89,9 @@ class model:
             weights = np.array(weights)
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
-            if training_step % 1000 == 0:
-                print("     %s's mse: %0.3f"%(self.name, mse_run))
-                if save:
-                    self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
+        print("     %s's mse: %0.3f"%(self.name, mse_run))
+        if save:
+            self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
 
     def restore(self):
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
@@ -284,10 +283,6 @@ class Game:
                     a_v = np.sum(a_v, axis = 0)
                     n_set[0].value[0] = np.max(a_v)/norm
                     n_set[1].value[0] = n_set[0].value[0]
-
-                    print(a_v)
-                    print(node.value)
-                    sys.exit()
                 else:
                     # exploit p0
                     a_v = np.zeros((2,2))
@@ -300,6 +295,7 @@ class Game:
                             norm += i_node.prob[0]
                             neighbor = i_node.neighbors[i_node.A[j]]
                             a_v[i,j] = neighbor.value[1]*i_node.prob[0]
+                    a_v = np.sum(a_v, axis = 0)
                     n_set[0].value[1] = np.max(a_v)/norm
                     n_set[1].value[1] = n_set[0].value[1]
                     # exploit p1
@@ -308,7 +304,6 @@ class Game:
                         neighbor = node.neighbors[a]
                         expected += neighbor.prob[1]*neighbor.value[0]
                     node.value[0] = expected
-                    print(node.name, node.value)
 
         node = self.root
         expected = [0,0]
@@ -316,7 +311,6 @@ class Game:
             expected[1] += neighbor.prob[0]*neighbor.value[1]
             expected[0] += neighbor.prob[1]*neighbor.value[0]
         node.value = expected
-        print(node.name, node.value)
         return self.root.value
 
 def connect(input, weights, biases, activations):
