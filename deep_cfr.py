@@ -27,9 +27,11 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
         M_r[p].train(B_vp, W[p], train_v, batch_v)
         if t % 100 == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
-            err0, err1 = measure_performance(M_s)
-            errs0.append(err0)
-            errs1.append(err1)
+            G.forward_update(M_s)
+            print(G.backward_update())
+            #err0, err1 = measure_performance(M_s)
+            #errs0.append(err0)
+            #errs1.append(err1)
 '''
 def measure_performance(M):
     T = Game()

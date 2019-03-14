@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 from operator import itemgetter
+from queue import Queue
+import sys # remove later
 
 class buffer:
     def __init__(self):
@@ -87,9 +89,9 @@ class model:
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
             if training_step % 1000 == 0:
-                print("     %s: mse: %0.3f"%(self.name, mse_run))
-            if save:
-                self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
+                print("     %s's mse: %0.3f"%(self.name, mse_run))
+                if save:
+                    self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
 
     def restore(self):
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
@@ -100,6 +102,8 @@ class Node:
         self.name = name
         self.A = None
         self.P = None
+        self.prob = [None, None]
+        self.svalue = [None, None]
 
     def set_fold(self, child):
         self.fold = child
@@ -133,6 +137,8 @@ class Node:
         self.KI = tree["B21"]
         self.KJ = tree["B20"]
         self.neighbors = [self.IJ, self.IK, self.JI, self.JK, self.KI, self.KJ]
+        self.A = list(range(6))
+        self.prob = [1,1]
         tree[self.name] = self
         return self
 
@@ -189,8 +195,8 @@ class Game:
         self.tree = tree
         self.i_set = [[["01", "02"], ["10", "12"], ["20", "21"]], [["10", "20"], ["01", "21"], ["02", "12"]]]
 
-    def i_set(self, p, perm):
-        return self.i_set[p, perm[p+1]]
+    def i_perm(self, perm, p):
+        return self.i_set[p][int(perm[p])]
 
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
         if node.name[0] in self.terminal:
@@ -219,17 +225,22 @@ class Game:
         else:
             return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
 
-    def forward_update(self, M_r):
+    def forward_update(self, model):
         queue = Queue()
-        queue.enqueue(self.root)
-        while not queue.is_empty():
-            node = queue.dequeue()
-            p = node.P
+        queue.put(self.root)
+        while not queue.empty():
+            node = queue.get()
             A = node.A
-            I = node.I(p)
-            sigma = calculate_strategy(I, A, M_r[p])
+            p = node.P
+            if node.name == "A":
+                sigma = np.full(6, 1/6)
+            else:
+                I = node.I(p)
+                sigma = calculate_strategy(I, A, model)
             for a in A:
                 neighbor = node.neighbors[a]
+                if neighbor.name[0] in "BCDF":
+                    queue.put(neighbor)
                 if p == 0:
                     neighbor.prob[0] = sigma[a]*node.prob[0]
                     neighbor.prob[1] = node.prob[1]
@@ -241,19 +252,13 @@ class Game:
                     neighbor.prob[1] = sigma[a]*node.prob[1]
 
     def backward_update(self):
-        for g_node in "IJEFGHCDBA":
+        for g_node in "IJEFGHCDB":
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
                 if g_node in self.terminal:
                     node.svalue = node.U
-                elif node.name == "A":
-                    expected = [0,0]
-                    for a in node.A:
-                        neighbor = node.neighbors[a]
-                        expected[1] += neighbor.prob[0]*neighbor.svalue[1]
-                        expected[0] += neighbor.prob[1]*neighbor.svalue[0]
-                    node.svalue = expected
+                    print(node.name, node.svalue)
 
                 elif node.P == 0:
                     # exploit p0
@@ -267,7 +272,7 @@ class Game:
                     avalue = np.zeros((2,3))
                     n_set = []
                     for i in range(2):
-                        i_node = self.tree[g_node + self.i_set(0, perm)[i]]
+                        i_node = self.tree[g_node + self.i_perm(perm, 0)[i]]
                         n_set.append(i_node)
                         for a in i_node.A:
                             avalue[i,a] = i_node.neighbors[a].svalue[0]
@@ -275,13 +280,15 @@ class Game:
                     n_set[0].svalue[0] = np.sum(sigma*avalue)/np.sum(sigma)
                     n_set[1].svalue[0] = n_set[0].svalue[0]
 
+                    print(node.name, node.svalue)
+
                 elif node.P == 1:
                     # exploit p0
                     sigma = np.zeros(3)
                     avalue = np.zeros((2,3))
                     n_set = []
                     for i in range(2):
-                        i_node = self.tree[g_node + self.i_set(1, perm)[i]]
+                        i_node = self.tree[g_node + self.i_perm(perm, 1)[i]]
                         n_set.append(i_node)
                         for a in i_node.A:
                             avalue[i,a] = i_node.neighbors[a].svalue[1]
@@ -294,9 +301,18 @@ class Game:
                         neighbor = node.neighbors[a]
                         expected += neighbor.prob[1]*neighbor.svalue[0]
                     node.svalue[0] = expected
+                    print(node.name, node.svalue)
                 else:
                     raise
-                return self.root.svalue
+        node = self.root
+        expected = [0,0]
+        for a in node.A:
+            neighbor = node.neighbors[a]
+            expected[1] += neighbor.prob[0]*neighbor.svalue[1]
+            expected[0] += neighbor.prob[1]*neighbor.svalue[0]
+        node.svalue = expected
+        print(node.name, node.svalue)
+        return self.root.svalue
 
 def connect(input, weights, biases, activations):
     layer = input
