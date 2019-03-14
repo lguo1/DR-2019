@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from operator import itemgetter
 from queue import Queue
+from itertools import permutations
 import sys # remove later
 
 class buffer:
@@ -103,7 +104,7 @@ class Node:
         self.A = None
         self.P = None
         self.prob = [None, None]
-        self.svalue = [None, None]
+        self.value = [None, None]
 
     def set_fold(self, child):
         self.fold = child
@@ -129,6 +130,9 @@ class Node:
     def I(self, p):
         return ([int(self.name[p+1])], *self.info)
 
+    def U(self, p):
+        return self.value[p]
+
     def rootify(self, tree):
         self.IJ = tree["B01"]
         self.IK = tree["B02"]
@@ -145,11 +149,14 @@ class Node:
 class Game:
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
+        self.n_perms = list(permutations(range(3), 2))
         self.terminal = "EIJGH"
         tree = {}
-        for perm in self.perms:
+        for i in range(6):
             for g_node in "JIHGFEDCB":
-                key = g_node + perm
+                perm = self.perms[i]
+                n_perm = self.n_perms[i]
+                key = g_node + self.perms[i]
                 node = Node(key)
                 tree[key] = node
                 if g_node == "B":
@@ -174,20 +181,20 @@ class Game:
                     node.info = ([1,2,0],[1,1,0])
                 elif g_node == "E":
                     util = [-1,-1]
-                    util[np.argmax(perm)] = 1
-                    node.U = util
+                    util[np.argmax(n_perm)] = 1
+                    node.value = util
                 elif g_node == "I":
-                    node.U = [-1,1]
+                    node.value = [-1,1]
                 elif g_node == "J":
                     util = [-2,-2]
-                    util[np.argmax(perm)] = 2
-                    node.U = util
+                    util[np.argmax(n_perm)] = 2
+                    node.value = util
                 elif g_node == "G":
-                    node.U = [1,-1]
+                    node.value = [1,-1]
                 elif g_node == "H":
                     util = [-2,-2]
-                    util[np.argmax(perm)] = 2
-                    node.U = util
+                    util[np.argmax(n_perm)] = 2
+                    node.value = util
                 else:
                     raise
         A = Node("A")
@@ -200,7 +207,7 @@ class Game:
 
     def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
         if node.name[0] in self.terminal:
-            return node.U[p]
+            return node.U(p)
         elif node.P == p:
             I = node.I(p)
             A = node.A
@@ -252,67 +259,65 @@ class Game:
                     neighbor.prob[1] = sigma[a]*node.prob[1]
 
     def backward_update(self):
-        for g_node in "IJEFGHCDB":
+        for g_node in "FCDB":
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
-                if g_node in self.terminal:
-                    node.svalue = node.U
-                    print(node.name, node.svalue)
-
-                elif node.P == 0:
+                if node.P == 0:
                     # exploit p0
                     expected = 0
                     for a in node.A:
                         neighbor = node.neighbors[a]
-                        expected += neighbor.prob[0]*neighbor.svalue[1]
-                    node.svalue[1] = expected
+                        expected += neighbor.prob[0]*neighbor.value[1]
+                    node.value[1] = expected
                     # exploit p1
-                    sigma = np.zeros(3)
-                    avalue = np.zeros((2,3))
+                    a_v = np.zeros((2,2))
                     n_set = []
                     for i in range(2):
                         i_node = self.tree[g_node + self.i_perm(perm, 0)[i]]
                         n_set.append(i_node)
-                        for a in i_node.A:
-                            avalue[i,a] = i_node.neighbors[a].svalue[0]
-                        sigma[np.argmax(avalue[i])] += i_node.prob[1]
-                    n_set[0].svalue[0] = np.sum(sigma*avalue)/np.sum(sigma)
-                    n_set[1].svalue[0] = n_set[0].svalue[0]
+                        norm = 0
+                        for j in range(2):
+                            norm += i_node.prob[1]
+                            neighbor = i_node.neighbors[i_node.A[j]]
+                            a_v[i,j] = neighbor.value[0]*i_node.prob[1]
+                    a_v = np.sum(a_v, axis = 0)
+                    n_set[0].value[0] = np.max(a_v)/norm
+                    n_set[1].value[0] = n_set[0].value[0]
 
-                    print(node.name, node.svalue)
-
-                elif node.P == 1:
+                    print(a_v)
+                    print(node.value)
+                    sys.exit()
+                else:
                     # exploit p0
-                    sigma = np.zeros(3)
-                    avalue = np.zeros((2,3))
+                    a_v = np.zeros((2,2))
                     n_set = []
                     for i in range(2):
                         i_node = self.tree[g_node + self.i_perm(perm, 1)[i]]
                         n_set.append(i_node)
-                        for a in i_node.A:
-                            avalue[i,a] = i_node.neighbors[a].svalue[1]
-                        sigma[np.argmax(avalue[i])] += i_node.prob[0]
-                    n_set[0].svalue[1] = np.sum(sigma*avalue)/np.sum(sigma)
-                    n_set[1].svalue[1] = n_set[0].svalue[1]
+                        norm = 0
+                        for j in range(2):
+                            norm += i_node.prob[0]
+                            neighbor = i_node.neighbors[i_node.A[j]]
+                            a_v[i,j] = neighbor.value[1]*i_node.prob[0]
+                    n_set[0].value[1] = np.max(a_v)/norm
+                    n_set[1].value[1] = n_set[0].value[1]
                     # exploit p1
                     expected = 0
                     for a in node.A:
                         neighbor = node.neighbors[a]
-                        expected += neighbor.prob[1]*neighbor.svalue[0]
-                    node.svalue[0] = expected
-                    print(node.name, node.svalue)
-                else:
-                    raise
+                        expected += neighbor.prob[1]*neighbor.value[0]
+                    node.value[0] = expected
+                    print(node.name, node.value)
+
         node = self.root
         expected = [0,0]
-        for a in node.A:
-            neighbor = node.neighbors[a]
-            expected[1] += neighbor.prob[0]*neighbor.svalue[1]
-            expected[0] += neighbor.prob[1]*neighbor.svalue[0]
-        node.svalue = expected
-        print(node.name, node.svalue)
-        return self.root.svalue
+        for neighbor in node.neighbors:
+            expected[1] += neighbor.prob[0]*neighbor.value[1]
+            expected[0] += neighbor.prob[1]*neighbor.value[0]
+        node.value = expected
+        print(node.name, node.value)
+        return self.root.value
 
 def connect(input, weights, biases, activations):
     layer = input
