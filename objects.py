@@ -104,6 +104,7 @@ class Node:
         self.P = None
         self.prob = [None, None]
         self.value = [None, None]
+        self.n_perm = None
 
     def set_fold(self, child):
         self.fold = child
@@ -127,7 +128,7 @@ class Node:
         return self.neighbors[action]
 
     def I(self, p):
-        return ([int(self.name[p+1])], *self.info)
+        return ([self.n_perm[p]], *self.info)
 
     def U(self, p):
         return self.value[p]
@@ -157,6 +158,7 @@ class Game:
                 n_perm = self.n_perms[i]
                 key = g_node + self.perms[i]
                 node = Node(key)
+                node.n_perm = n_perm
                 tree[key] = node
                 if g_node == "B":
                     node.neighbors = [None, node.set_check(tree["C"+perm]), node.set_bet(tree["D"+perm])]
@@ -272,45 +274,42 @@ class Game:
                     # exploit p1
                     a_v = np.zeros((2,2))
                     n_set = []
+                    norm = 0
                     for i in range(2):
                         i_node = self.tree[g_node + self.i_perm(perm, 0)[i]]
                         n_set.append(i_node)
-                        norm = 0
+                        norm += i_node.prob[1]
                         for j in range(2):
-                            norm += i_node.prob[1]
-                            neighbor = i_node.neighbors[i_node.A[j]]
-                            a_v[i,j] = neighbor.value[0]*i_node.prob[1]
+                            a_v[i,j] = i_node.neighbors[i_node.A[j]].value[0]*i_node.prob[1]
                     a_v = np.sum(a_v, axis = 0)
                     n_set[0].value[0] = np.max(a_v)/norm
                     n_set[1].value[0] = n_set[0].value[0]
                 else:
-                    # exploit p0
-                    a_v = np.zeros((2,2))
-                    n_set = []
-                    for i in range(2):
-                        i_node = self.tree[g_node + self.i_perm(perm, 1)[i]]
-                        n_set.append(i_node)
-                        norm = 0
-                        for j in range(2):
-                            norm += i_node.prob[0]
-                            neighbor = i_node.neighbors[i_node.A[j]]
-                            a_v[i,j] = neighbor.value[1]*i_node.prob[0]
-                    a_v = np.sum(a_v, axis = 0)
-                    n_set[0].value[1] = np.max(a_v)/norm
-                    n_set[1].value[1] = n_set[0].value[1]
                     # exploit p1
                     expected = 0
                     for a in node.A:
                         neighbor = node.neighbors[a]
                         expected += neighbor.prob[1]*neighbor.value[0]
                     node.value[0] = expected
+                    # exploit p0
+                    a_v = np.zeros((2,2))
+                    n_set = []
+                    norm = 0
+                    for i in range(2):
+                        i_node = self.tree[g_node + self.i_perm(perm, 1)[i]]
+                        n_set.append(i_node)
+                        norm += i_node.prob[0]
+                        for j in range(2):
+                            a_v[i,j] = i_node.neighbors[i_node.A[j]].value[1]*i_node.prob[0]
+                    a_v = np.sum(a_v, axis = 0)
+                    n_set[0].value[1] = np.max(a_v)/norm
+                    n_set[1].value[1] = n_set[0].value[1]
 
-        node = self.root
         expected = [0,0]
-        for neighbor in node.neighbors:
+        for neighbor in self.root.neighbors:
             expected[1] += neighbor.prob[0]*neighbor.value[1]
             expected[0] += neighbor.prob[1]*neighbor.value[0]
-        node.value = expected
+        self.root.value = expected
         return self.root.value
 
 def connect(input, weights, biases, activations):

@@ -2,11 +2,9 @@ from objects import *
 from itertools import permutations
 import argparse
 
-def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
+def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, iter_per_check=100):
     tf.set_random_seed(1)
     np.random.seed(1)
-    errs = []
-    errs = []
     G = Game()
     B_v = (buffer(), buffer())
     B_s = buffer()
@@ -25,13 +23,11 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000):
         W[2].extend([(1+t)/2]*B_s.count)
         print("iteration %04d"%t)
         M_r[p].train(B_vp, W[p], train_v, batch_v)
-        if t % 1000 == 0:
+        if t % iter_per_check == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
             G.forward_update(M_s)
             print("     exploitability:", G.backward_update())
-            #err0, err1 = measure_performance(M_s)
-            #errs0.append(err0)
-            #errs1.append(err1)
+    
 '''
 def measure_performance(M):
     T = Game()
@@ -68,5 +64,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("iter", help="number of iterations", type=int, default=10000)
     parser.add_argument("trav", help="number of travesals", type=int, default=100)
+    parser.add_argument("--train_s", type=int, default=2000)
+    parser.add_argument("--batch_s", type=int, default=1000)
+    parser.add_argument("--train_v", type=int, default=2000)
+    parser.add_argument("--batch_v", type=int, default=1000)
+    parser.add_argument("--iter_per_check", type=int, default=100)
     args = parser.parse_args()
-    main(int(args.iter), int(args.trav))
+    main(int(args.iter), int(args.trav), train_s = int(args.train_s), train_v = int(args.train_v)
+    , batch_v = int(args.train_s), batch_s = int(args.train_s), iter_per_check = int(args.iter_per_check))
