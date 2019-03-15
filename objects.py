@@ -3,6 +3,7 @@ import numpy as np
 from operator import itemgetter
 from queue import Queue
 from itertools import permutations
+import pickle
 import sys # remove later
 
 class buffer:
@@ -225,15 +226,13 @@ class Game:
             A = node.A
             sigma = calculate_strategy(I, A, M_r[p_not])
             B_s.add(I, sigma)
-            try:
-                a = np.random.choice(3, p=sigma)
-            except ValueError:
-                a = np.random.choice(3, p=sigma/sigma.sum())
+            a = np.random.choice(3, p=sigma)
             return self.collect_samples(node.take(a), p, p_not, M_r, B_vp, B_s)
         else:
             return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
 
-    def forward_update(self, model):
+    def forward_update(self, model, t):
+        dic = {}
         queue = Queue()
         queue.put(self.root)
         while not queue.empty():
@@ -245,6 +244,7 @@ class Game:
             else:
                 I = node.I(p)
                 sigma = calculate_strategy(I, A, model)
+            dic[node.name] = sigma
             for a in A:
                 neighbor = node.neighbors[a]
                 if neighbor.name[0] in "BCDF":
@@ -258,6 +258,8 @@ class Game:
                 else:
                     neighbor.prob[0] = sigma[a]*node.prob[0]
                     neighbor.prob[1] = sigma[a]*node.prob[1]
+        with open('./sigmas/sigma-%d.pkl'%t, 'wb') as output:
+            pickle.dump(dic, output, pickle.HIGHEST_PROTOCOL)
 
     def backward_update(self):
         for g_node in "FCDB":
@@ -325,7 +327,9 @@ def calculate_strategy(I, A, model):
     d = model.predict(I)[0, A]
     d_plus = np.clip(d, 0, None)
     if d_plus.sum() > 0:
-        sigma[A] = d_plus/d_plus.sum()
+        sigma[A] = d_plus/np.sum(d_plus)
+        if np.sum(sigma)!= 1:
+            return sigma/np.sum(sigma)
         return sigma
     else:
         sigma[A[np.argmax(d)]] = 1
