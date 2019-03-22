@@ -1,0 +1,5 @@
+*.ipynb
+saves/
+sigmas/
+.ipynb_checkpoints/
+_pyache_/
