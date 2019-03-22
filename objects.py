@@ -182,20 +182,20 @@ class Game:
                     node.A = [0,2]
                     node.info = ([1,2,0],[1,1,0])
                 elif g_node == "E":
-                    util = [-1,-1]
-                    util[np.argmax(n_perm)] = 1
+                    util = [1/4,1/4]
+                    util[np.argmax(n_perm)] = 3/4
                     node.value = util
                 elif g_node == "I":
-                    node.value = [-1,1]
+                    node.value = [1/4,3/4]
                 elif g_node == "J":
-                    util = [-2,-2]
-                    util[np.argmax(n_perm)] = 2
+                    util = [0,0]
+                    util[np.argmax(n_perm)] = 1
                     node.value = util
                 elif g_node == "G":
-                    node.value = [1,-1]
+                    node.value = [3/4,1/4]
                 elif g_node == "H":
-                    util = [-2,-2]
-                    util[np.argmax(n_perm)] = 2
+                    util = [0,0]
+                    util[np.argmax(n_perm)] = 1
                     node.value = util
                 else:
                     raise

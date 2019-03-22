@@ -31,7 +31,7 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, ite
             print("learned d", M_r[p].predict(I)[0, A])
             print("sigma", calculate_strategy(I, A, M_r[p]))
         '''
-        if t % iter_per_check == 0:
+        if (t+1) % iter_per_check == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
             G.forward_update(M_s, t)
             print("     exploitability:", G.backward_update())
