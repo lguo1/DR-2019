@@ -23,13 +23,24 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, ite
         W[2].extend([(1+t)/2]*B_s.count)
         print("iteration %04d"%t)
         M_r[p].train(B_vp, W[p], train_v, batch_v)
-        '''
         if p == 1:
-            node = G.tree["D20"]
+            node = G.tree["D01"]
             I = node.I(p)
             A = node.A
-            print("learned d", M_r[p].predict(I)[0, A])
+            print(">>>>>>>>")
+            print(node.name)
+            print("l_d", M_r[p].predict(I)[0])
             print("sigma", calculate_strategy(I, A, M_r[p]))
+            print("<<<<<<<<")
+        '''
+        else:
+            node = G.tree["F20"]
+            I = node.I(p)
+            A = node.A
+            print(node.name)
+            print("l_d", M_r[p].predict(I)[0])
+            print("sigma", calculate_strategy(I, A, M_r[p]))
+            print("_____")
         '''
         if (t+1) % iter_per_check == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
