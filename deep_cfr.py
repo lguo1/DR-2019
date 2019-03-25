@@ -13,16 +13,14 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, ite
     M_s = model('state')
     for t in range(iter):
         p = t%2
-        p_not = (p+1)%2
         B_vp = B_v[p]
         B_s.set()
         B_vp.set()
         for n in range(trav):
-            G.collect_samples(G.root, p, p_not, M_r, B_vp, B_s)
+            G.collect_samples(G.root, p, M_r, B_vp, B_s)
         W[p].extend([(1+t)/2]*B_vp.count)
         W[2].extend([(1+t)/2]*B_s.count)
-        print("iteration %04d"%t)
-        M_r[p].train(B_vp, W[p], train_v, batch_v)
+        '''
         if p == 1:
             node = G.tree["D01"]
             I = node.I(p)
@@ -30,16 +28,15 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, ite
             print(">>>>>>>>")
             print(node.name)
             print("l_d", M_r[p].predict(I)[0])
-            print("sigma", calculate_strategy(I, A, M_r[p]))
+            print("sigma", M_r[p].calculate_strategy(I, A))
             print("<<<<<<<<")
-        '''
         else:
             node = G.tree["F20"]
             I = node.I(p)
             A = node.A
             print(node.name)
             print("l_d", M_r[p].predict(I)[0])
-            print("sigma", calculate_strategy(I, A, M_r[p]))
+            print("sigma", M_r[p].calculate_strategy(I, A))
             print("_____")
         '''
         if (t+1) % iter_per_check == 0:
@@ -57,7 +54,7 @@ def measure_performance(M):
     for c in range(3):
         for n in range(4):
             node[0] = "BFCD"[n]
-            sigmas[c,n] = calculate_strategy(([c], *T.info[node]), T.A(node), M)
+            sigmas[c,n] = M.calculate_strategy(([c], *T.info[node]), T.A(node))
     c = 0
     alphas[0] = .5*(sigmas[c, 0, 2] - sigmas[c, 0, 1] + 1)
     err0 += np.sum(np.square(sigmas[c, 1] - np.array([1, 0, 0])))

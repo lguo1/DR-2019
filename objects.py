@@ -96,6 +96,19 @@ class model:
     def restore(self):
         self.saver.restore(self.sess, './saves/%s_model.ckpt'%(self.name))
 
+    def calculate_strategy(self, I, A):
+        sigma = np.zeros(3)
+        d = self.predict(I)[0, A]
+        d_plus = np.clip(d, 0, None)
+        if d_plus.sum() > 0:
+            sigma[A] = d_plus/np.sum(d_plus)
+            if np.sum(sigma)!= 1:
+                return sigma/np.sum(sigma)
+            return sigma
+        else:
+            sigma[A[np.argmax(d)]] = 1
+            return sigma
+
 # fold 0, check 1, bet 2.
 class Node:
     def __init__(self, name):
@@ -206,43 +219,30 @@ class Game:
     def i_perm(self, perm, p):
         return self.i_set[p][int(perm[p])]
 
-    def collect_samples(self, node, p, p_not, M_r, B_vp, B_s):
+    def collect_samples(self, node, p, M_r, B_vp, B_s):
         if node.name[0] in self.terminal:
             return node.U(p)
         elif node.P == p:
             I = node.I(p)
             A = node.A
-            sigma = calculate_strategy(I, A, M_r[p])
+            sigma = M_r[p].calculate_strategy(I, A)
             v_a = np.full(3, -2)
             for a in A:
-                v_a[a] = self.collect_samples(node.take(a), p, p_not, M_r, B_vp, B_s)
+                v_a[a] = self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
             v_s = np.dot(v_a, sigma)
             d = normalize(v_a - v_s)
-            if node.name == "D01":
-                print(">>>>>>>>")
-                print(node.name)
-                print("v_s",v_s)
-                print("v_a",v_a)
-                print("t_d", d)
-                print("<<<<<<<<")
             B_vp.add(I, d)
             return v_s
-        elif node.P == p_not:
+        elif node.P == other(p):
+            p_not = node.P
             I = node.I(p_not)
             A = node.A
-            sigma = calculate_strategy(I, A, M_r[p_not])
+            sigma = M_r[p_not].calculate_strategy(I, A)
             B_s.add(I, sigma)
             a = np.random.choice(3, p=sigma)
-            '''
-            if node.name == "F20":
-                print(node.name)
-                print("sigma", sigma)
-                print("a", a)
-                print("____")
-            '''
-            return self.collect_samples(node.take(a), p, p_not, M_r, B_vp, B_s)
+            return self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
         else:
-            return self.collect_samples(node.deal(), p, p_not, M_r, B_vp, B_s)
+            return self.collect_samples(node.deal(), p, M_r, B_vp, B_s)
 
     def forward_update(self, model, t):
         dic = {}
@@ -256,7 +256,7 @@ class Game:
                 sigma = np.full(6, 1/6)
             else:
                 I = node.I(p)
-                sigma = calculate_strategy(I, A, model)
+                sigma = model.calculate_strategy(I, A)
             dic[node.name] = sigma
             for a in A:
                 neighbor = node.neighbors[a]
@@ -287,7 +287,7 @@ class Game:
                         expected += neighbor.prob[0]*neighbor.value[1]
                     node.value[1] = expected
                     # exploit p1
-                    a_v = np.zeros((2,2))
+                    v_a = np.zeros((2,2))
                     n_set = []
                     norm = 0
                     for i in range(2):
@@ -295,9 +295,9 @@ class Game:
                         n_set.append(i_node)
                         norm += i_node.prob[1]
                         for j in range(2):
-                            a_v[i,j] = i_node.neighbors[i_node.A[j]].value[0]*i_node.prob[1]
-                    a_v = np.sum(a_v, axis = 0)
-                    n_set[0].value[0] = np.max(a_v)/norm
+                            v_a[i,j] = i_node.neighbors[i_node.A[j]].value[0]*i_node.prob[1]
+                    v_a = np.sum(v_a, axis = 0)
+                    n_set[0].value[0] = np.max(v_a)/norm
                     n_set[1].value[0] = n_set[0].value[0]
                 else:
                     # exploit p1
@@ -307,7 +307,7 @@ class Game:
                         expected += neighbor.prob[1]*neighbor.value[0]
                     node.value[0] = expected
                     # exploit p0
-                    a_v = np.zeros((2,2))
+                    v_a = np.zeros((2,2))
                     n_set = []
                     norm = 0
                     for i in range(2):
@@ -315,9 +315,9 @@ class Game:
                         n_set.append(i_node)
                         norm += i_node.prob[0]
                         for j in range(2):
-                            a_v[i,j] = i_node.neighbors[i_node.A[j]].value[1]*i_node.prob[0]
-                    a_v = np.sum(a_v, axis = 0)
-                    n_set[0].value[1] = np.max(a_v)/norm
+                            v_a[i,j] = i_node.neighbors[i_node.A[j]].value[1]*i_node.prob[0]
+                    v_a = np.sum(v_a, axis = 0)
+                    n_set[0].value[1] = np.max(v_a)/norm
                     n_set[1].value[1] = n_set[0].value[1]
 
         expected = [0,0]
@@ -335,18 +335,8 @@ def connect(input, weights, biases, activations):
             layer = activation(layer)
     return layer
 
-def calculate_strategy(I, A, model):
-    sigma = np.zeros(3)
-    d = model.predict(I)[0, A]
-    d_plus = np.clip(d, 0, None)
-    if d_plus.sum() > 0:
-        sigma[A] = d_plus/np.sum(d_plus)
-        if np.sum(sigma)!= 1:
-            return sigma/np.sum(sigma)
-        return sigma
-    else:
-        sigma[A[np.argmax(d)]] = 1
-        return sigma
-
 def normalize(x):
     return np.exp(x) / np.exp(x).sum()
+
+def other(p):
+    return 1 - p
