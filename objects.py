@@ -28,7 +28,7 @@ class buffer:
         return (itemgetter(*indices)(self.list[0]), itemgetter(*indices)(self.list[1]), itemgetter(*indices)(self.list[2]), itemgetter(*indices)(self.list[3]))
 
 class model:
-    def __init__(self, name, sigmoid=False):
+    def __init__(self, name, softmax=False):
         self.name = name
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -49,16 +49,16 @@ class model:
                 biases = [b0a, b1d]
                 outputa = connect(self.input_pha, weights, biases, activations)
 
-                self.input_phb = tf.placeholder(dtype=tf.float32, shape=[None, 3])
-                W0b = tf.get_variable(name='W0b', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
+                self.input_phb = tf.placeholder(dtype=tf.float32, shape=[None, 2])
+                W0b = tf.get_variable(name='W0b', shape=[2, 32], initializer=tf.contrib.layers.xavier_initializer())
                 W1b = tf.get_variable(name='W1b', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
                 b0b = tf.get_variable(name='b0b', shape=[32], initializer=tf.constant_initializer(0.))
                 weights = [W0b, W1b]
                 biases = [b0b, b1d]
                 outputb = connect(self.input_phb, weights, biases, activations)
 
-                self.input_phc = tf.placeholder(dtype=tf.float32, shape=[None, 3])
-                W0c = tf.get_variable(name='W0c', shape=[3, 32], initializer=tf.contrib.layers.xavier_initializer())
+                self.input_phc = tf.placeholder(dtype=tf.float32, shape=[None, 2])
+                W0c = tf.get_variable(name='W0c', shape=[2, 32], initializer=tf.contrib.layers.xavier_initializer())
                 W1c = tf.get_variable(name='W1c', shape=[32, 16], initializer=tf.contrib.layers.xavier_initializer())
                 b0c = tf.get_variable(name='b0c', shape=[32], initializer=tf.constant_initializer(0.))
                 weights = [W0c, W1c]
@@ -66,8 +66,8 @@ class model:
                 outputc = connect(self.input_phc, weights, biases, activations)
 
                 inputd = outputa + outputb + outputc
-                if sigmoid:
-                    activations = [tf.nn.relu, tf.nn.sigmoid]
+                if softmax:
+                    activations = [tf.nn.relu, tf.nn.softmax]
                 else:
                     activations = [tf.nn.relu, None]
                 weights = [W2d, W3d]
@@ -140,9 +140,6 @@ class Node:
     def take(self, action):
         return self.neighbors[action]
 
-    def I(self, p):
-        return ([self.n_perm[p]], *self.info)
-
     def U(self, p):
         return self.value[p]
 
@@ -177,37 +174,37 @@ class Game:
                     node.neighbors = [None, node.set_check(tree["C"+perm]), node.set_bet(tree["D"+perm])]
                     node.P = 0
                     node.A = [1,2]
-                    node.info = ([0,0,0],[0,0,0])
+                    node.I = ([node.n_perm[node.P]],[0,0],[0,0])
                 elif g_node == "C":
                     node.neighbors = [None, node.set_check(tree["E"+perm]), node.set_bet(tree["F"+perm])]
                     node.P = 1
                     node.A = [1,2]
-                    node.info = ([1,0,0],[1,0,0])
+                    node.I = ([node.n_perm[node.P]],[1,0],[1,0])
                 elif g_node == "D":
                     node.neighbors = [node.set_fold(tree["G"+perm]), None, node.set_bet(tree["H"+perm])]
                     node.P = 1
                     node.A = [0,2]
-                    node.info = ([2,0,0],[1,0,0])
+                    node.I = ([node.n_perm[node.P]],[2,0],[1,0])
                 elif g_node == "F":
                     node.neighbors = [node.set_fold(tree["I"+perm]), None, node.set_bet(tree["J"+perm])]
                     node.P = 0
                     node.A = [0,2]
-                    node.info = ([1,2,0],[1,1,0])
+                    node.I = ([node.n_perm[node.P]],[1,2],[1,1])
                 elif g_node == "E":
-                    util = [-1,-1]
-                    util[np.argmax(n_perm)] = 1
+                    util = [1/4,1/4]
+                    util[np.argmax(n_perm)] = 3/4
                     node.value = util
                 elif g_node == "I":
-                    node.value = [-1,1]
+                    node.value = [1/4,3/4]
                 elif g_node == "J":
-                    util = [-2,-2]
-                    util[np.argmax(n_perm)] = 2
+                    util = [0,0]
+                    util[np.argmax(n_perm)] = 1
                     node.value = util
                 elif g_node == "G":
-                    node.value = [1,-1]
+                    node.value = [3/4,1/4]
                 elif g_node == "H":
-                    util = [-2,-2]
-                    util[np.argmax(n_perm)] = 2
+                    util = [0,0]
+                    util[np.argmax(n_perm)] = 1
                     node.value = util
                 else:
                     raise
@@ -223,19 +220,25 @@ class Game:
         if node.name[0] in self.terminal:
             return node.U(p)
         elif node.P == p:
-            I = node.I(p)
+            I = node.I
             A = node.A
             sigma = M_r[p].calculate_strategy(I, A)
-            v_a = np.full(3, -2)
+            v_a = np.zeros(3)
             for a in A:
                 v_a[a] = self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
             v_s = np.dot(v_a, sigma)
-            d = normalize(v_a - v_s)
+            d = v_a - v_s
+            if node.name == "D01":
+                print("D01")
+                print(I)
+                print("     t_d",d)
+                print("     v_a",v_a)
+                print("     v_s",v_s)
             B_vp.add(I, d)
             return v_s
         elif node.P == other(p):
             p_not = node.P
-            I = node.I(p_not)
+            I = node.I
             A = node.A
             sigma = M_r[p_not].calculate_strategy(I, A)
             B_s.add(I, sigma)
@@ -255,7 +258,7 @@ class Game:
             if node.name == "A":
                 sigma = np.full(6, 1/6)
             else:
-                I = node.I(p)
+                I = node.I
                 sigma = model.calculate_strategy(I, A)
             dic[node.name] = sigma
             for a in A:
@@ -319,7 +322,6 @@ class Game:
                     v_a = np.sum(v_a, axis = 0)
                     n_set[0].value[1] = np.max(v_a)/norm
                     n_set[1].value[1] = n_set[0].value[1]
-
         expected = [0,0]
         for neighbor in self.root.neighbors:
             expected[1] += neighbor.prob[0]*neighbor.value[1]
@@ -334,9 +336,6 @@ def connect(input, weights, biases, activations):
         if activation is not None:
             layer = activation(layer)
     return layer
-
-def normalize(x):
-    return np.exp(x) / np.exp(x).sum()
 
 def other(p):
     return 1 - p
