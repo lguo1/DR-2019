@@ -1,5 +1,4 @@
 from objects import *
-from itertools import permutations
 import argparse
 
 def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, iter_per_check=100):
@@ -26,13 +25,6 @@ def main(iter, trav, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, ite
             M_s.train(B_s, W[2], train_s, batch_s, True)
             G.forward_update(M_s, t)
             print("     exploitability", G.backward_update())
-            node = G.tree["D01"]
-            I = node.I
-            A = node.A
-            print(node.name)
-            print(I)
-            print("     l_d", M_s.predict(I)[0])
-            print("     sigma", M_s.calculate_strategy(I, A))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

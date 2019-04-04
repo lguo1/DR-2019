@@ -228,19 +228,12 @@ class Game:
                 v_a[a] = self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
-            if node.name == "D01":
-                print("D01")
-                print(I)
-                print("     t_d",d)
-                print("     v_a",v_a)
-                print("     v_s",v_s)
             B_vp.add(I, d)
             return v_s
         elif node.P == other(p):
-            p_not = node.P
             I = node.I
             A = node.A
-            sigma = M_r[p_not].calculate_strategy(I, A)
+            sigma = M_r[other(p)].calculate_strategy(I, A)
             B_s.add(I, sigma)
             a = np.random.choice(3, p=sigma)
             return self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
@@ -282,46 +275,27 @@ class Game:
             for perm in self.perms:
                 key = g_node + perm
                 node = self.tree[key]
-                if node.P == 0:
-                    # exploit p0
-                    expected = 0
-                    for a in node.A:
-                        neighbor = node.neighbors[a]
-                        expected += neighbor.prob[0]*neighbor.value[1]
-                    node.value[1] = expected
-                    # exploit p1
-                    v_a = np.zeros((2,2))
-                    n_set = []
-                    norm = 0
-                    for i in range(2):
-                        i_node = self.tree[g_node + self.i_perm(perm, 0)[i]]
-                        n_set.append(i_node)
-                        norm += i_node.prob[1]
-                        for j in range(2):
-                            v_a[i,j] = i_node.neighbors[i_node.A[j]].value[0]*i_node.prob[1]
-                    v_a = np.sum(v_a, axis = 0)
-                    n_set[0].value[0] = np.max(v_a)/norm
-                    n_set[1].value[0] = n_set[0].value[0]
-                else:
-                    # exploit p1
-                    expected = 0
-                    for a in node.A:
-                        neighbor = node.neighbors[a]
-                        expected += neighbor.prob[1]*neighbor.value[0]
-                    node.value[0] = expected
-                    # exploit p0
-                    v_a = np.zeros((2,2))
-                    n_set = []
-                    norm = 0
-                    for i in range(2):
-                        i_node = self.tree[g_node + self.i_perm(perm, 1)[i]]
-                        n_set.append(i_node)
-                        norm += i_node.prob[0]
-                        for j in range(2):
-                            v_a[i,j] = i_node.neighbors[i_node.A[j]].value[1]*i_node.prob[0]
-                    v_a = np.sum(v_a, axis = 0)
-                    n_set[0].value[1] = np.max(v_a)/norm
-                    n_set[1].value[1] = n_set[0].value[1]
+                p = node.P
+                p_not = other(p)
+                # exploit p
+                expected = 0
+                for a in node.A:
+                    neighbor = node.neighbors[a]
+                    expected += neighbor.prob[p]*neighbor.value[p_not]
+                node.value[p_not] = expected
+                # exploit p_not
+                v_a = np.zeros((2,2))
+                n_set = []
+                norm = 0
+                for i in range(2):
+                    i_node = self.tree[g_node + self.i_perm(perm, p)[i]]
+                    n_set.append(i_node)
+                    norm += i_node.prob[p_not]
+                    for j in range(2):
+                        v_a[i,j] = i_node.neighbors[i_node.A[j]].value[p]*i_node.prob[p_not]
+                v_a = np.sum(v_a, axis = 0)
+                n_set[0].value[p] = np.max(v_a)/norm
+                n_set[1].value[p] = n_set[0].value[p]
         expected = [0,0]
         for neighbor in self.root.neighbors:
             expected[1] += neighbor.prob[0]*neighbor.value[1]
