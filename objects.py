@@ -4,7 +4,6 @@ from operator import itemgetter
 from queue import Queue
 from itertools import permutations
 import pickle
-import sys # remove later
 
 class buffer:
     def __init__(self):
@@ -19,7 +18,6 @@ class buffer:
         self.list[3].append(output)
         self.size += 1
         self.count += 1
-        return self.list
 
     def set(self):
         self.count = 0
@@ -28,11 +26,12 @@ class buffer:
         return (itemgetter(*indices)(self.list[0]), itemgetter(*indices)(self.list[1]), itemgetter(*indices)(self.list[2]), itemgetter(*indices)(self.list[3]))
 
 class model:
-    def __init__(self, name, softmax=False):
+    def __init__(self, name, seed, softmax=False):
         self.name = name
         self.graph = tf.Graph()
         with self.graph.as_default():
             with tf.variable_scope(name):
+                tf.set_random_seed(seed)
                 self.output_ph = tf.placeholder(dtype=tf.float32, shape=[None, 3])
                 b1d = tf.get_variable(name='b1d', shape=[16], initializer=tf.constant_initializer(0.))
                 b2d = tf.get_variable(name='b2d', shape=[16], initializer=tf.constant_initializer(0.))
