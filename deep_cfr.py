@@ -1,7 +1,7 @@
 from objects import *
 import argparse
 
-def main(iter, trav, seed=1, train_v=2000, batch_v=1000, train_s=2000, batch_s=1000, check_freq=100):
+def main(iter, trav, seed, train_v, batch_v, train_s, batch_s, check_freq, name):
     np.random.seed(seed)
     G = Game()
     B_v = (buffer(), buffer())
@@ -22,8 +22,9 @@ def main(iter, trav, seed=1, train_v=2000, batch_v=1000, train_s=2000, batch_s=1
         M_r[p].train(B_vp, W[p], train_v, batch_v)
         if (t+1) % check_freq == 0:
             M_s.train(B_s, W[2], train_s, batch_s, True)
-            G.forward_update(M_s, t)
+            G.forward_update(M_s, name)
             print("     exploitability", G.backward_update())
+    G.visualize(name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_v", type=int, default=2000)
     parser.add_argument("--batch_v", type=int, default=1000)
     parser.add_argument("--check_freq", type=int, default=100)
+    parser.add_argument("--name", default="exp1")
     args = parser.parse_args()
     main(int(args.iter), int(args.trav), seed = int(args.seed), train_s = int(args.train_s), train_v = int(args.train_v)
-    , batch_v = int(args.train_s), batch_s = int(args.train_s), iter_per_check = int(args.check_freq))
+    , batch_v = int(args.train_s), batch_s = int(args.train_s), check_freq = int(args.check_freq), name = args.name)

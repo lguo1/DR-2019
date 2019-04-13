@@ -1,4 +1,5 @@
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import numpy as np
 from operator import itemgetter
 from queue import Queue
@@ -108,6 +109,11 @@ class model:
             sigma[A[np.argmax(d)]] = 1
             return sigma
 
+    def get_strategy(self, I, A):
+        sigma = np.zeros(3)
+        sigma[A] = self.predict(I)[0, A]
+        return sigma
+
 # fold 0, check 1, bet 2.
 class Node:
     def __init__(self, name):
@@ -160,6 +166,7 @@ class Game:
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.n_perms = list(permutations(range(3), 2))
         self.terminal = "EIJGH"
+        self.create_history()
         tree = {}
         for i in range(6):
             for g_node in "JIHGFEDCB":
@@ -239,8 +246,7 @@ class Game:
         else:
             return self.collect_samples(node.deal(), p, M_r, B_vp, B_s)
 
-    def forward_update(self, model, t):
-        dic = {}
+    def forward_update(self, model, name):
         queue = Queue()
         queue.put(self.root)
         while not queue.empty():
@@ -251,8 +257,8 @@ class Game:
                 sigma = np.full(6, 1/6)
             else:
                 I = node.I
-                sigma = model.calculate_strategy(I, A)
-            dic[node.name] = sigma
+                sigma = model.get_strategy(I, A)
+                self.hist[node.name].append(sigma[A[0]])
             for a in A:
                 neighbor = node.neighbors[a]
                 if neighbor.name[0] in "BCDF":
@@ -266,8 +272,8 @@ class Game:
                 else:
                     neighbor.prob[0] = sigma[a]*node.prob[0]
                     neighbor.prob[1] = sigma[a]*node.prob[1]
-        with open('./sigmas/sigma-%d.pkl'%t, 'wb') as output:
-            pickle.dump(dic, output, pickle.HIGHEST_PROTOCOL)
+        with open('sigmas/%s.pkl'%name, 'wb') as output:
+            pickle.dump(self.hist, output, pickle.HIGHEST_PROTOCOL)
 
     def backward_update(self):
         for g_node in "FCDB":
@@ -301,6 +307,27 @@ class Game:
             expected[0] += neighbor.prob[1]*neighbor.value[0]
         self.root.value = expected
         return self.root.value
+
+    def create_history(self):
+        self.hist = {}
+        for g_node in "BCDF":
+            for perm in self.perms:
+                self.hist[g_node+perm] = []
+
+    def visualize(self, name):
+        hist = pickle.load(open('./sigmas/%s.pkl'%name, 'rb'))
+        gn = "BCDF"
+        for f in range(4):
+            plt.figure(f)
+            for s in range(6):
+                nn = gn[f]+self.perms[s]
+                strat = hist[nn]
+                plt.subplot(611+s)
+                plt.title(nn)
+                plt.ylim(0,1)
+                plt.plot(strat)
+            plt.savefig("./sigmas/%s-%s.png"%(name,gn[f]))
+            plt.show()
 
 def connect(input, weights, biases, activations):
     layer = input
