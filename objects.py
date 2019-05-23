@@ -197,20 +197,20 @@ class Game:
                     node.A = [0,2]
                     node.I = ([node.n_perm[node.P]],[1,2],[1,1])
                 elif g_node == "E":
-                    util = [1/4,1/4]
-                    util[np.argmax(n_perm)] = 3/4
+                    util = [-1,-1]
+                    util[np.argmax(n_perm)] = 1
                     node.value = util
                 elif g_node == "I":
-                    node.value = [1/4,3/4]
+                    node.value = [-1,1]
                 elif g_node == "J":
-                    util = [0,0]
-                    util[np.argmax(n_perm)] = 1
+                    util = [-2,-2]
+                    util[np.argmax(n_perm)] = 2
                     node.value = util
                 elif g_node == "G":
-                    node.value = [3/4,1/4]
+                    node.value = [1,-1]
                 elif g_node == "H":
-                    util = [0,0]
-                    util[np.argmax(n_perm)] = 1
+                    util = [-2,-2]
+                    util[np.argmax(n_perm)] = 2
                     node.value = util
                 else:
                     raise
@@ -282,29 +282,30 @@ class Game:
                 node = self.tree[key]
                 p = node.P
                 p_not = other(p)
-                # exploit p
+                # p_not exploits p
                 expected = 0
                 for a in node.A:
                     neighbor = node.neighbors[a]
                     expected += neighbor.prob[p]*neighbor.value[p_not]
                 node.value[p_not] = expected
-                # exploit p_not
+                # p exploits p_not
                 v_a = np.zeros((2,2))
                 n_set = []
-                norm = 0
+                g_prob = 0
+                a_indices = node.A
                 for i in range(2):
                     i_node = self.tree[g_node + self.i_perm(perm, p)[i]]
                     n_set.append(i_node)
-                    norm += i_node.prob[p_not]
+                    g_prob += i_node.prob[p_not]
                     for j in range(2):
-                        v_a[i,j] = i_node.neighbors[i_node.A[j]].value[p]*i_node.prob[p_not]
+                        v_a[i,j] = i_node.neighbors[a_indices[j]].value[p]*i_node.prob[p_not]
                 v_a = np.sum(v_a, axis = 0)
-                n_set[0].value[p] = np.max(v_a)/norm
+                n_set[0].value[p] = np.max(v_a)/g_prob
                 n_set[1].value[p] = n_set[0].value[p]
         expected = [0,0]
         for neighbor in self.root.neighbors:
-            expected[1] += neighbor.prob[0]*neighbor.value[1]
-            expected[0] += neighbor.prob[1]*neighbor.value[0]
+            expected[0] += 1/6*neighbor.value[0]
+            expected[1] += 1/6*neighbor.value[1]
         self.root.value = expected
         return self.root.value
 
@@ -324,7 +325,7 @@ class Game:
                 strat = hist[nn]
                 plt.subplot(611+s)
                 plt.title(nn)
-                plt.ylim(0,1)
+                plt.ylim(-0.1,1.1)
                 plt.plot(strat)
             plt.savefig("./sigmas/%s-%s.png"%(name,gn[f]))
             plt.show()

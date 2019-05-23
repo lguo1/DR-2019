@@ -1,7 +1,7 @@
 from objects import *
 import argparse
 
-def main(iter, trav, seed, train_v, batch_v, train_s, batch_s, check_freq, name):
+def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name):
     np.random.seed(seed)
     G = Game()
     B_v = (buffer(), buffer())
@@ -28,15 +28,15 @@ def main(iter, trav, seed, train_v, batch_v, train_s, batch_s, check_freq, name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("iter", help="number of iterations", type=int, default=10000)
-    parser.add_argument("trav", help="number of travesals", type=int, default=100)
+    parser.add_argument("iter", help="number of iterations", type=int)
+    parser.add_argument("trav", help="number of travesals", type=int)
+    parser.add_argument("check_freq", type=int)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--train_s", type=int, default=2000)
     parser.add_argument("--batch_s", type=int, default=1000)
     parser.add_argument("--train_v", type=int, default=2000)
     parser.add_argument("--batch_v", type=int, default=1000)
-    parser.add_argument("--check_freq", type=int, default=100)
     parser.add_argument("--name", default="exp1")
     args = parser.parse_args()
-    main(int(args.iter), int(args.trav), seed = int(args.seed), train_s = int(args.train_s), train_v = int(args.train_v)
-    , batch_v = int(args.train_s), batch_s = int(args.train_s), check_freq = int(args.check_freq), name = args.name)
+    main(int(args.iter), int(args.trav), int(args.check_freq), seed = int(args.seed), train_s = int(args.train_s), train_v = int(args.train_v)
+    , batch_v = int(args.train_s), batch_s = int(args.train_s), name = args.name)
