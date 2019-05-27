@@ -182,21 +182,25 @@ class Game:
                     node.P = 0
                     node.A = [1,2]
                     node.I = ([node.n_perm[node.P]],[0,0],[0,0])
+                    node.f = [node.n_perm[node.P], 0, 0]
                 elif g_node == "C":
                     node.neighbors = [None, node.set_check(tree["E"+perm]), node.set_bet(tree["F"+perm])]
                     node.P = 1
                     node.A = [1,2]
                     node.I = ([node.n_perm[node.P]],[1,0],[1,0])
+                    node.f = [node.n_perm[node.P], 1, 0]
                 elif g_node == "D":
                     node.neighbors = [node.set_fold(tree["G"+perm]), None, node.set_bet(tree["H"+perm])]
                     node.P = 1
                     node.A = [0,2]
                     node.I = ([node.n_perm[node.P]],[2,0],[1,0])
+                    node.f = [node.n_perm[node.P], 2, 0]
                 elif g_node == "F":
                     node.neighbors = [node.set_fold(tree["I"+perm]), None, node.set_bet(tree["J"+perm])]
                     node.P = 0
                     node.A = [0,2]
                     node.I = ([node.n_perm[node.P]],[1,2],[1,1])
+                    node.f = [node.n_perm[node.P], 1, 2]
                 elif g_node == "E":
                     util = [-1,-1]
                     util[np.argmax(n_perm)] = 1
@@ -223,7 +227,7 @@ class Game:
     def i_perm(self, perm, p):
         return self.i_set[p][int(perm[p])]
 
-    def collect_samples(self, node, p, M_r, B_vp, B_s):
+    def collect_samples(self, node, p, M_r, B_vp, B_s, gs):
         if node.name[0] in self.terminal:
             return node.U(p)
         elif node.P == p:
@@ -236,6 +240,7 @@ class Game:
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
             B_vp.add(I, d)
+            gs += node.f + d
             return v_s
         elif node.P == other(p):
             I = node.I
