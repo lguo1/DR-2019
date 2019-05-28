@@ -1,6 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from operator import itemgetter
 from queue import Queue
 from itertools import permutations
@@ -126,17 +127,14 @@ class Node:
 
     def set_fold(self, child):
         self.fold = child
-        child.before = [self, 0]
         return child
 
     def set_check(self, child):
         self.check = child
-        child.before = [self, 1]
         return child
 
     def set_bet(self, child):
         self.bet = child
-        child.before = [self, 2]
         return child
 
     def deal(self):
@@ -165,6 +163,7 @@ class Game:
 # 'I' consists of info-set, history, and progress bar.
 # 'f' consists of info-set, action0, and action1.
     def __init__(self):
+        self.GP_dict = {'0': [1,0,0], '1': [1,0,0], }
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.n_perms = list(permutations(range(3), 2))
         self.terminal = "EIJGH"
@@ -182,26 +181,22 @@ class Game:
                     node.neighbors = [None, node.set_check(tree["C"+perm]), node.set_bet(tree["D"+perm])]
                     node.P = 0
                     node.A = [1,2]
-                    node.I = ([node.n_perm[node.P]],[0,0],[0,0])
-                    node.f = [node.n_perm[node.P], 0, 0]
+                    node.I = ([n_perm[node.P]],[0,0],[0,0])
                 elif g_node == "C":
                     node.neighbors = [None, node.set_check(tree["E"+perm]), node.set_bet(tree["F"+perm])]
                     node.P = 1
                     node.A = [1,2]
-                    node.I = ([node.n_perm[node.P]],[1,0],[1,0])
-                    node.f = [node.n_perm[node.P], 1, 0]
+                    node.I = ([n_perm[node.P]],[1,0],[1,0])
                 elif g_node == "D":
                     node.neighbors = [node.set_fold(tree["G"+perm]), None, node.set_bet(tree["H"+perm])]
                     node.P = 1
                     node.A = [0,2]
-                    node.I = ([node.n_perm[node.P]],[2,0],[1,0])
-                    node.f = [node.n_perm[node.P], 2, 0]
+                    node.I = ([n_perm[node.P]],[2,0],[1,0])
                 elif g_node == "F":
                     node.neighbors = [node.set_fold(tree["I"+perm]), None, node.set_bet(tree["J"+perm])]
                     node.P = 0
                     node.A = [0,2]
-                    node.I = ([node.n_perm[node.P]],[1,2],[1,1])
-                    node.f = [node.n_perm[node.P], 1, 2]
+                    node.I = ([n_perm[node.P]],[1,2],[1,1])
                 elif g_node == "E":
                     util = [-1,-1]
                     util[np.argmax(n_perm)] = 1
@@ -241,7 +236,7 @@ class Game:
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
             B_vp.add(I, d)
-            GP_p.append(np.append(node.f,d))
+            GP_p.append(np.append(node.name, d))
             return v_s
         elif node.P == other(p):
             I = node.I
@@ -399,20 +394,18 @@ class Game:
         print("expected exploitability\n", [-1/18,1/18])
 
 def save_W(W):
-    with open('saves/W0.pkl', 'wb') as output:
-        pickle.dump(W[0], output, pickle.HIGHEST_PROTOCOL)
-    with open('saves/W1.pkl', 'wb') as output:
-        pickle.dump(W[1], output, pickle.HIGHEST_PROTOCOL)
+    with open('saves/W.pkl', 'wb') as output:
+        pickle.dump(W, output, pickle.HIGHEST_PROTOCOL)
 
 def save_GP(GP):
-    GP_0 = pd.DataFrame(GP[0], columns=['infoset','action0','action1','v_a0','v_a1','v_a2'])
-    GP_1 = pd.DataFrame(GP[1], columns=['infoset','action0','action1','v_a0','v_a1','v_a2'])
-    print("GP_0")
-    print(GP_0.tail(2))
-    print("GP_1")
-    print(GP_1.tail(2))
-    GP_0.to_csv(r'/scratch/lguo1/DR-2019/saves/GP_0.csv')
-    GP_1.to_csv(r'/scratch/lguo1/DR-2019/saves/GP_1.csv')
+    GP0 = pd.DataFrame(GP[0], columns=['name','va0','va1','va2'])
+    GP1 = pd.DataFrame(GP[1], columns=['name','va0','va1','va2'])
+    print("GP0")
+    print(GP0.tail(2))
+    print("GP1")
+    print(GP1.tail(2))
+    GP0.to_csv(r'/scratch/lguo1/DR-2019/saves/GP0.csv')
+    GP1.to_csv(r'/scratch/lguo1/DR-2019/saves/GP1.csv')
 
 def connect(input, weights, biases, activations):
     layer = input

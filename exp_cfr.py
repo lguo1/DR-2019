@@ -1,5 +1,4 @@
 from exp_objects import *
-import pandas as pd
 import argparse
 
 def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name):
