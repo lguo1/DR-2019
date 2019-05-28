@@ -1,10 +1,11 @@
 from exp_objects import *
+import pandas as pd
 import argparse
 
 def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name):
     np.random.seed(seed)
     G = Game()
-    gs = []
+    GP = [[],[]]
     B_v = (buffer(), buffer())
     B_s = buffer()
     W = [[],[],[]]
@@ -13,10 +14,11 @@ def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name)
     for t in range(iter):
         p = t%2
         B_vp = B_v[p]
+        GP_p = GP[p]
         B_s.set()
         B_vp.set()
         for n in range(trav):
-            G.collect_samples(G.root, p, M_r, B_vp, B_s, gs)
+            G.collect_samples(G.root, p, M_r, B_vp, B_s, GP_p)
         W[p].extend([(1+t)/2]*B_vp.count)
         W[2].extend([(1+t)/2]*B_s.count)
         print("iteration %04d"%t)
@@ -25,7 +27,9 @@ def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name)
             M_s.train(B_s, W[2], train_s, batch_s, True)
             G.forward_update(M_s, name)
             print("     exploitability", G.backward_update())
-    G.visualize(name)
+    save_W(W)
+    save_GP(GP)
+    # G.visualize(name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

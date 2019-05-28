@@ -162,7 +162,7 @@ class Node:
         return self
 
 class Game:
-# input consists of info-set, history, and progress bar.
+# 'I' consists of info-set, history, and progress bar.
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.n_perms = list(permutations(range(3), 2))

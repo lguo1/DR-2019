@@ -27,7 +27,7 @@ class buffer:
         return (itemgetter(*indices)(self.list[0]), itemgetter(*indices)(self.list[1]), itemgetter(*indices)(self.list[2]), itemgetter(*indices)(self.list[3]))
 
 class model:
-    def __init__(self, name, seed, softmax=False):
+    def __init__(self, name, seed=0, softmax=False):
         self.name = name
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -162,7 +162,8 @@ class Node:
         return self
 
 class Game:
-# input consists of info-set, history, and progress bar.
+# 'I' consists of info-set, history, and progress bar.
+# 'f' consists of info-set, action0, and action1.
     def __init__(self):
         self.perms = ["01", "02", "10", "12", "20", "21"]
         self.n_perms = list(permutations(range(3), 2))
@@ -227,7 +228,7 @@ class Game:
     def i_perm(self, perm, p):
         return self.i_set[p][int(perm[p])]
 
-    def collect_samples(self, node, p, M_r, B_vp, B_s, gs):
+    def collect_samples(self, node, p, M_r, B_vp, B_s, GP_p):
         if node.name[0] in self.terminal:
             return node.U(p)
         elif node.P == p:
@@ -236,11 +237,11 @@ class Game:
             sigma = M_r[p].calculate_strategy(I, A)
             v_a = np.zeros(3)
             for a in A:
-                v_a[a] = self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
+                v_a[a] = self.collect_samples(node.take(a), p, M_r, B_vp, B_s, GP_p)
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
             B_vp.add(I, d)
-            gs += node.f + d
+            GP_p.append(np.append(node.f,d))
             return v_s
         elif node.P == other(p):
             I = node.I
@@ -248,9 +249,9 @@ class Game:
             sigma = M_r[other(p)].calculate_strategy(I, A)
             B_s.add(I, sigma)
             a = np.random.choice(3, p=sigma)
-            return self.collect_samples(node.take(a), p, M_r, B_vp, B_s)
+            return self.collect_samples(node.take(a), p, M_r, B_vp, B_s, GP_p)
         else:
-            return self.collect_samples(node.deal(), p, M_r, B_vp, B_s)
+            return self.collect_samples(node.deal(), p, M_r, B_vp, B_s, GP_p)
 
     def forward_update(self, model, name):
         queue = Queue()
@@ -335,6 +336,83 @@ class Game:
                 plt.plot(strat)
             plt.savefig("./sigmas/%s-%s.png"%(name,gn[f]))
             plt.show()
+
+    def test(self, name):
+        M_s = model(name, softmax = True)
+        M_s.restore()
+        queue = Queue()
+        queue.put(self.root)
+        while not queue.empty():
+            node = queue.get()
+            A = node.A
+            p = node.P
+            if node.name == "A":
+                sigma = np.full(6, 1/6)
+            else:
+                I = node.I
+                sigma = M_s.get_strategy(I, A)
+            for a in A:
+                neighbor = node.neighbors[a]
+                if neighbor.name[0] in "BCDF":
+                    queue.put(neighbor)
+                if p == 0:
+                    neighbor.prob[0] = sigma[a]*node.prob[0]
+                    neighbor.prob[1] = node.prob[1]
+                elif p == 1:
+                    neighbor.prob[0] = node.prob[0]
+                    neighbor.prob[1] = sigma[a]*node.prob[1]
+                else:
+                    neighbor.prob[0] = sigma[a]*node.prob[0]
+                    neighbor.prob[1] = sigma[a]*node.prob[1]
+        for g_node in "FCDB":
+            for perm in self.perms:
+                key = g_node + perm
+                node = self.tree[key]
+                p = node.P
+                p_not = other(p)
+                # p_not exploits p
+                expected = 0
+                for a in node.A:
+                    neighbor = node.neighbors[a]
+                    expected += neighbor.prob[p]*neighbor.value[p_not]
+                node.value[p_not] = expected
+                # p exploits p_not
+                v_a = np.zeros((2,2))
+                n_set = []
+                g_prob = 0
+                a_indices = node.A
+                for i in range(2):
+                    i_node = self.tree[g_node + self.i_perm(perm, p)[i]]
+                    n_set.append(i_node)
+                    g_prob += i_node.prob[p_not]
+                    for j in range(2):
+                        v_a[i,j] = i_node.neighbors[a_indices[j]].value[p]*i_node.prob[p_not]
+                v_a = np.sum(v_a, axis = 0)
+                n_set[0].value[p] = np.max(v_a)/g_prob
+                n_set[1].value[p] = n_set[0].value[p]
+        expected = [0,0]
+        for neighbor in self.root.neighbors:
+            expected[0] += 1/6*neighbor.value[0]
+            expected[1] += 1/6*neighbor.value[1]
+        self.root.value = expected
+        print("exploitability\n", self.root.value)
+        print("expected exploitability\n", [-1/18,1/18])
+
+def save_W(W):
+    with open('saves/W0.pkl', 'wb') as output:
+        pickle.dump(W[0], output, pickle.HIGHEST_PROTOCOL)
+    with open('saves/W1.pkl', 'wb') as output:
+        pickle.dump(W[1], output, pickle.HIGHEST_PROTOCOL)
+
+def save_GP(GP):
+    GP_0 = pd.DataFrame(GP[0], columns=['infoset','action0','action1','v_a0','v_a1','v_a2'])
+    GP_1 = pd.DataFrame(GP[1], columns=['infoset','action0','action1','v_a0','v_a1','v_a2'])
+    print("GP_0")
+    print(GP_0.tail(2))
+    print("GP_1")
+    print(GP_1.tail(2))
+    GP_0.to_csv(r'/scratch/lguo1/DR-2019/saves/GP_0.csv')
+    GP_1.to_csv(r'/scratch/lguo1/DR-2019/saves/GP_1.csv')
 
 def connect(input, weights, biases, activations):
     layer = input
