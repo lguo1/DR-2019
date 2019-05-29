@@ -260,8 +260,6 @@ class Game:
                 I = node.I
                 sigma = model.get_strategy(I, A)
                 self.hist[node.name].append(sigma[A[0]])
-                if node.name =='F21':
-                    print("recorded fold: %f"%(self.hist[node.name][-1]))
             for a in A:
                 neighbor = node.neighbors[a]
                 if neighbor.name[0] in "BCDF":
@@ -333,66 +331,69 @@ class Game:
             plt.savefig("./sigmas/%s-%s.png"%(name,gn[f]))
             plt.show()
 
-    def test(self, name):
-        M_s = model(name, softmax = True)
-        M_s.restore()
-        queue = Queue()
-        queue.put(self.root)
-        while not queue.empty():
-            node = queue.get()
-            A = node.A
-            p = node.P
-            if node.name == "A":
-                sigma = np.full(6, 1/6)
+def test():
+    G = Game()
+    M = model('state', softmax = True)
+    M.restore()
+    dic = {}
+    queue = Queue()
+    queue.put(G.root)
+    while not queue.empty():
+        node = queue.get()
+        A = node.A
+        p = node.P
+        if node.name == "A":
+            sigma = np.full(6, 1/6)
+        else:
+            I = node.I
+            sigma = M.get_strategy(I, A)
+            dic[node.name] = sigma[A]
+        for a in A:
+            neighbor = node.neighbors[a]
+            if neighbor.name[0] in "BCDF":
+                queue.put(neighbor)
+            if p == 0:
+                neighbor.prob[0] = sigma[a]*node.prob[0]
+                neighbor.prob[1] = node.prob[1]
+            elif p == 1:
+                neighbor.prob[0] = node.prob[0]
+                neighbor.prob[1] = sigma[a]*node.prob[1]
             else:
-                I = node.I
-                sigma = M_s.get_strategy(I, A)
-            for a in A:
+                neighbor.prob[0] = sigma[a]*node.prob[0]
+                neighbor.prob[1] = sigma[a]*node.prob[1]
+    print("strategies\n", dic)
+    for g_node in "FCDB":
+        for perm in G.perms:
+            key = g_node + perm
+            node = G.tree[key]
+            p = node.P
+            p_not = other(p)
+            # p_not exploits p
+            expected = 0
+            for a in node.A:
                 neighbor = node.neighbors[a]
-                if neighbor.name[0] in "BCDF":
-                    queue.put(neighbor)
-                if p == 0:
-                    neighbor.prob[0] = sigma[a]*node.prob[0]
-                    neighbor.prob[1] = node.prob[1]
-                elif p == 1:
-                    neighbor.prob[0] = node.prob[0]
-                    neighbor.prob[1] = sigma[a]*node.prob[1]
-                else:
-                    neighbor.prob[0] = sigma[a]*node.prob[0]
-                    neighbor.prob[1] = sigma[a]*node.prob[1]
-        for g_node in "FCDB":
-            for perm in self.perms:
-                key = g_node + perm
-                node = self.tree[key]
-                p = node.P
-                p_not = other(p)
-                # p_not exploits p
-                expected = 0
-                for a in node.A:
-                    neighbor = node.neighbors[a]
-                    expected += neighbor.prob[p]*neighbor.value[p_not]
-                node.value[p_not] = expected
-                # p exploits p_not
-                v_a = np.zeros((2,2))
-                n_set = []
-                g_prob = 0
-                a_indices = node.A
-                for i in range(2):
-                    i_node = self.tree[g_node + self.i_perm(perm, p)[i]]
-                    n_set.append(i_node)
-                    g_prob += i_node.prob[p_not]
-                    for j in range(2):
-                        v_a[i,j] = i_node.neighbors[a_indices[j]].value[p]*i_node.prob[p_not]
-                v_a = np.sum(v_a, axis = 0)
-                n_set[0].value[p] = np.max(v_a)/g_prob
-                n_set[1].value[p] = n_set[0].value[p]
-        expected = [0,0]
-        for neighbor in self.root.neighbors:
-            expected[0] += 1/6*neighbor.value[0]
-            expected[1] += 1/6*neighbor.value[1]
-        self.root.value = expected
-        print("exploitability\n", self.root.value)
-        print("expected exploitability\n", [-1/18,1/18])
+                expected += neighbor.prob[p]*neighbor.value[p_not]
+            node.value[p_not] = expected
+            # p exploits p_not
+            v_a = np.zeros((2,2))
+            n_set = []
+            g_prob = 0
+            a_indices = node.A
+            for i in range(2):
+                i_node = G.tree[g_node + G.i_perm(perm, p)[i]]
+                n_set.append(i_node)
+                g_prob += i_node.prob[p_not]
+                for j in range(2):
+                    v_a[i,j] = i_node.neighbors[a_indices[j]].value[p]*i_node.prob[p_not]
+            v_a = np.sum(v_a, axis = 0)
+            n_set[0].value[p] = np.max(v_a)/g_prob
+            n_set[1].value[p] = n_set[0].value[p]
+    expected = [0,0]
+    for neighbor in G.root.neighbors:
+        expected[0] += 1/6*neighbor.value[0]
+        expected[1] += 1/6*neighbor.value[1]
+    G.root.value = expected
+    print("exploitability\n", G.root.value)
 
 def save_W(W):
     with open('saves/W.pkl', 'wb') as output:

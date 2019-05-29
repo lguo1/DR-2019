@@ -32,7 +32,7 @@ def main(n_samples):
 
     # kernel = W() + C(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * Matern(length_scale=1.0, length_scale_bounds=(1e-3, 1e1), nu=1.5) + C(1, (1e-3, 1e1)) * RationalQuadratic(length_scale=1.0, alpha=0.1)
     # kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) + C(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * DP() + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) * DP()
-    kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) + ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * DP()
+    kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) + ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * DP() 
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     stime = time.time()
     gp.fit(X0_train, y0_train)
