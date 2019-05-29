@@ -161,7 +161,6 @@ class Node:
 
 class Game:
 # 'I' consists of info-set, history, and progress bar.
-# 'f' consists of info-set, action0, and action1.
     def __init__(self):
         self.GP_dict = {'0': [1,0,0], '1': [1,0,0], }
         self.perms = ["01", "02", "10", "12", "20", "21"]
@@ -261,6 +260,8 @@ class Game:
                 I = node.I
                 sigma = model.get_strategy(I, A)
                 self.hist[node.name].append(sigma[A[0]])
+                if node.name =='F21':
+                    print("recorded fold: %f"%(self.hist[node.name][-1]))
             for a in A:
                 neighbor = node.neighbors[a]
                 if neighbor.name[0] in "BCDF":

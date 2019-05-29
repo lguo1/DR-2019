@@ -6,26 +6,29 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel as W, ConstantKernel as C, Matern, RBF, ExpSineSquared as ESS, RationalQuadratic as RQ, DotProduct as DP
 from sklearn.metrics import r2_score
 from sklearn.model_selection import GridSearchCV
-
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('n_samples',type=int)
+args = parser.parse_args()
 
 def translate(raw, pre, post, cols, p):
     translated = []
     for x in raw:
         translated.append(pre[x[0]] + post[x[p+1]])
-    return pd.DataFrame(translated, columns=cols)
+    return pd.DataFrame(translated, columns=cols, index=raw.index)
 
-def main():
+def main(n_samples):
     np.random.seed(0)
-    pre = {'B':[1,0,0,0],'C':[0,1,0,0],'D':[0,0,1,0],'F':[0,1,0,1]}
+    pre = {'B':[0,0,0,0],'C':[1,0,1,0],'D':[2,0,1,0],'F':[1,2,1,1]}
     post = {'0': [1,0,0],'1': [0,1,0], '2':[0,0,1]}
     cols = ['pre0','pre1', 'pre2', 'pre3', 'post0', 'post1', 'post2']
     print('player 0')
     data0 = pd.read_csv("./saves/GP0.csv", index_col=0)
     print('data\n%s'%(data0.tail(2)))
-    raw = data0['name']
+    raw = data0[-n_samples:]['name']
     translation = translate(raw, pre, post, cols, 0)
     print('translation\n%s'%(translation.tail(2)))
-    X0_train, X0_test, y0_train, y0_test = train_test_split(translation, data0[['va0','va1','va2']])
+    X0_train, X0_test, y0_train, y0_test = train_test_split(translation, data0[-n_samples:][['va0','va1','va2']])
 
     # kernel = W() + C(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * Matern(length_scale=1.0, length_scale_bounds=(1e-3, 1e1), nu=1.5) + C(1, (1e-3, 1e1)) * RationalQuadratic(length_scale=1.0, alpha=0.1)
     # kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) + C(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * DP() + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) * DP()
@@ -38,7 +41,7 @@ def main():
     print('training result: %f'%r2_score(y0_train, gp.predict(X0_train)))
     print('test result: %f'%r2_score(y0_test, gp.predict(X0_test)))
 
-main()
+main(args.n_samples)
 
 '''
 W = pickle.load(open('./saves/W.pkl', 'rb'))

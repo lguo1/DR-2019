@@ -126,17 +126,14 @@ class Node:
 
     def set_fold(self, child):
         self.fold = child
-        child.before = [self, 0]
         return child
 
     def set_check(self, child):
         self.check = child
-        child.before = [self, 1]
         return child
 
     def set_bet(self, child):
         self.bet = child
-        child.before = [self, 2]
         return child
 
     def deal(self):
@@ -181,22 +178,22 @@ class Game:
                     node.neighbors = [None, node.set_check(tree["C"+perm]), node.set_bet(tree["D"+perm])]
                     node.P = 0
                     node.A = [1,2]
-                    node.I = ([node.n_perm[node.P]],[0,0],[0,0])
+                    node.I = ([n_perm[node.P]],[0,0],[0,0])
                 elif g_node == "C":
                     node.neighbors = [None, node.set_check(tree["E"+perm]), node.set_bet(tree["F"+perm])]
                     node.P = 1
                     node.A = [1,2]
-                    node.I = ([node.n_perm[node.P]],[1,0],[1,0])
+                    node.I = ([n_perm[node.P]],[1,0],[1,0])
                 elif g_node == "D":
                     node.neighbors = [node.set_fold(tree["G"+perm]), None, node.set_bet(tree["H"+perm])]
                     node.P = 1
                     node.A = [0,2]
-                    node.I = ([node.n_perm[node.P]],[2,0],[1,0])
+                    node.I = ([n_perm[node.P]],[2,0],[1,0])
                 elif g_node == "F":
                     node.neighbors = [node.set_fold(tree["I"+perm]), None, node.set_bet(tree["J"+perm])]
                     node.P = 0
                     node.A = [0,2]
-                    node.I = ([node.n_perm[node.P]],[1,2],[1,1])
+                    node.I = ([n_perm[node.P]],[1,2],[1,1])
                 elif g_node == "E":
                     util = [-1,-1]
                     util[np.argmax(n_perm)] = 1
