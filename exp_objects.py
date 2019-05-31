@@ -235,7 +235,7 @@ class Game:
             v_s = np.dot(v_a, sigma)
             d = v_a - v_s
             B_vp.add(I, d)
-            GP_p.append(np.append(node.name, d))
+            GP_p.append(np.append(node.name, d[A]))
             return v_s
         elif node.P == other(p):
             I = node.I
