@@ -23,6 +23,8 @@ def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name)
         print("iteration %04d"%t)
         M_r[p].train(B_vp, W[p], train_v, batch_v)
         if (t+1) % check_freq == 0:
+            M_r[0].save()
+            M_r[1].save()
             M_s.train(B_s, W[2], train_s, batch_s, True)
             I = G.tree['F21'].I
             A = G.tree['F21'].A
@@ -30,9 +32,9 @@ def main(iter, trav, check_freq, seed, train_v, batch_v, train_s, batch_s, name)
             print("strategy at F21: %s"%(M_r[0].calculate_strategy(I, A)))
             G.forward_update(M_s, name)
             print("     exploitability", G.backward_update())
-    save_W(W)
-    save_GP(GP)
-    G.visualize(name)
+    #save_W(W)
+    #save_GP(GP)
+    #G.visualize(name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

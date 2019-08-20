@@ -85,13 +85,16 @@ class model:
     def predict(self, inputs):
         return self.sess.run(self.output_pred, feed_dict={self.input_pha: [inputs[0]], self.input_phb: [inputs[1]], self.input_phc: [inputs[2]]})
 
-    def train(self, B, weights, N_train, N_batch, save=False):
+    def train(self, B, weights, N_train, N_batch, to_save=False):
         for training_step in range(N_train):
             weights = np.array(weights)
             sample = B.sample(np.random.choice(B.size, N_batch, p=weights/weights.sum()))
             _, mse_run = self.sess.run([self.opt, self.mse], feed_dict={self.input_pha: sample[0], self.input_phb: sample[1], self.input_phc: sample[2], self.output_ph: sample[3]})
         print("     %s's mse: %0.3f"%(self.name, mse_run))
-        if save:
+        if to_save:
+            self.save()
+
+    def save(self):
             self.saver.save(self.sess, './saves/%s_model.ckpt'%(self.name))
 
     def restore(self):

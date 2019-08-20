@@ -11,31 +11,31 @@ parser = argparse.ArgumentParser()
 parser.add_argument('n_samples',type=int)
 args = parser.parse_args()
 
-def translate(raw, pre, post, cols, p):
+def translate(p, raw, dic, cols=None):
     translated = []
     for x in raw:
-        translated.append(pre[x[0]] + post[x[p+1]])
+        translated.append(dic[x[0]] + dic[x[p+1]])
     return pd.DataFrame(translated, columns=cols, index=raw.index)
 
 def main(n_samples):
     np.random.seed(0)
-    #pre = {'B':[0,0,0,0],'C':[1,0,1,0],'D':[2,0,1,0],'F':[1,2,1,1]}
-    #post = {'0': [1,0,0],'1': [0,1,0], '2':[0,0,1]}
-    #cols = ['pre0','pre1', 'pre2', 'pre3', 'post0', 'post1', 'post2']
-    pre = {'B':[0], 'C':[1], 'D':[2], 'F': [3]}
-    post = {'0': [0], '1': [1], '2': [2]}
-    cols = ['pre0', 'post0']
     print('player 0')
     data0 = pd.read_csv("./saves/GP0.csv", index_col=0)
     print('data\n%s'%(data0.tail(2)))
+
+    #pre = {'B':[0,0,0,0],'C':[1,0,1,0],'D':[2,0,1,0],'F':[1,2,1,1]}
+    #post = {'0': [1,0,0],'1': [0,1,0], '2':[0,0,1]}
     raw = data0[-n_samples:]['name']
-    translation = translate(raw, pre, post, cols, 0)
+    dic = {'B':[0], 'C':[1], 'D':[2], 'F': [3], '0': [0], '1': [1], '2': [2]}
+    cols = ['pre0', 'post0']
+    translation = translate(0, raw, dic, cols)
     print('translation\n%s'%(translation.tail(2)))
-    X0_train, X0_test, y0_train, y0_test = train_test_split(translation, data0[-n_samples:][['va0','va1','va2']])
+
     # kernel = W() + C(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(10, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * Matern(length_scale=1.0, length_scale_bounds=(1e-3, 1e1), nu=1.5) + C(1, (1e-3, 1e1)) * RationalQuadratic(length_scale=1.0, alpha=0.1)
     # kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) + C(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * DP() + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) * RBF(1, (1e-3, 1e1)) * DP()
     # kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RationalQuadratic(length_scale=1.0, alpha=0.1) + ESS(1.0, 2.0, periodicity_bounds=(1e-2, 1e2)) * DP() + C(1, (1e-3, 1e1)) * ESS(1.0, 2.0, periodicity_bounds=(1e-2, 1e2))
     kernel = W() + C(1, (1e-3, 1e1)) + C(1, (1e-3, 1e1)) * RBF(1, (1e-3, 1e1)) +  ESS(1.0, 2.0, periodicity_bounds=(1e-2, 1e1)) * DP()
+    X0_train, X0_test, y0_train, y0_test = train_test_split(translation, data0[-n_samples:][['va0','va1','va2']])
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     stime = time.time()
     gp.fit(X0_train, y0_train)
@@ -43,6 +43,20 @@ def main(n_samples):
     print("Posterior (kernel: %s)\n Log-Likelihood: %.3f" % (gp.kernel_, gp.log_marginal_likelihood(gp.kernel_.theta)))
     print('training result: %f'%r2_score(y0_train, gp.predict(X0_train)))
     print('test result: %f'%r2_score(y0_test, gp.predict(X0_test)))
+
+    test = raw.loc[y0_test.index]
+    dic = {'B':[[0,0],[0,0]], 'C':[[1,0],[1,0]], 'D':[[2,0],[1,0]], 'F': [[1,2],[1,1]], '0': [[0]], '1': [[1]], '2': [[2]]}
+    cols = ['action0', 'action1', 'hand']
+    original = translate(0, test, dic, cols)
+    M = model('p0')
+    M.restore()
+    stime = time.time()
+    prediction = []
+    for i in range(test.size):
+        I = original[['hand', 'action0', 'action1']].iloc[i]
+        prediction.append(M.predict(I)[0,:])
+    print("\nNeural Net: %.3f" % (time.time() - stime))
+    print('test result: %f'%r2_score(y0_test, prediction))
 
 main(args.n_samples)
 
