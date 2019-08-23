@@ -65,6 +65,18 @@ def CRM(game, T):
     print("nonpositive portion of player 2's Correlated Equilibrium matrix\n", L2)
     return Z2/T
 
+def check_nash(Gx, x, y):
+    # this function is used to verify whether a given strategy is a Nash equilibrium.
+    # it takes a matrix G and two strategies for two players.
+    # it returns a Nash matrix playing those two strategies.
+    return np.sum(np.matmul(x[None].T,y[None])*Gx, axis=2)
+
+def check_corr(Gx, z):
+    # this function is used to verify whether a given strategy is a correlated equilibrium.
+    # it takes a matrix G and a joint distribution.
+    # it returns a correlated matrix playing the joint distribution.
+    return np.sum(z*Gx, axis=2)
+
 def NM(game, T):
     # this is the procedure I proposed to find Nash Equilibrium.
     G1 = g(game.u[0])
@@ -81,6 +93,8 @@ def NM(game, T):
         L2[L2<0]=0
         # The calculation is similar to CRM except that here we use the product
         # of the marginal distributions rather than the joint distribution.
+        # The resultant Li is the Nash matrix where
+        # Li[k,j] = z^i(j)z^{-i}(a^{-i})*[u^i(k,a^{-i}) - u^i(j,a^{-i})]
         D1 = np.diagflat(np.sum(L1,axis=0))
         D2 = np.diagflat(np.sum(L2,axis=0))
         q1 = prob(np.around(null(L1-D1),3))
@@ -97,6 +111,7 @@ def NM(game, T):
 def main():
     np.random.seed(0)
     game = RPS3()
-    print("joint distribution (row player = player 1) \n", NM(game,100))
+    print("Nash matrix for the equilbrium strategy \n",check_nash(g(game.u[0]), np.full(3,1/3),np.full(3,1/3)))
+    print("joint distribution (row player = player 1) \n", NM(game,3000))
 
 main()
