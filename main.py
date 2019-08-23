@@ -111,7 +111,7 @@ def NM(game, T):
 def main():
     np.random.seed(0)
     game = RPS3()
-    print("Nash matrix for the equilbrium strategy \n",check_nash(g(game.u[0]), np.full(3,1/3),np.full(3,1/3)))
-    print("joint distribution (row player = player 1) \n", NM(game,3000))
+    #print("Nash matrix for the equilbrium strategy \n",check_nash(g(game.u[0]), np.full(3,1/3),np.full(3,1/3)))
+    print("joint distribution (row player = player 1) \n", NM(game,2000))
 
 main()
